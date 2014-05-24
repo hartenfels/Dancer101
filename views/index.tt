@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<% USE HTML %>
+<% MACRO render_depts(depts, depth) BLOCK %>
+    <% IF depts.size %>
+    <ul class="departments">
+    <% FOREACH d IN depts %>
+        <li id="department-<% depth %>-<% loop.index %>" class="dept-item">
+            <% HTML.escape(d.name) %>
+        </li>
+        <% IF d.employees.size %>
+        <% dn = loop.index %>
+        <ul class="employees">
+        <% FOREACH e IN d.employees %>
+            <li id="employee-<% depth %>-<% dn %>-<% loop.index %>" class="empl-item">
+                <% HTML.escape(e.name   ) %>,
+                <% HTML.escape(e.address) %>,
+                <% HTML.escape(e.salary ) %>
+            </li>
+        <% END %>
+        </ul>
+        <% END %>
+        <% render_depts(d.departments, depth + 1) %>
+    <% END %>
+    </ul>
+    <% END %>
+<% END %>
+<html>
+    <head>
+        <title>Contribution:Dancer</title>
+    </head>
+    <body>
+        <h1>Contribution:Dancer</h1>
+        <h2>101Companies</h2>
+        <ul class="companies">
+        <% FOREACH c IN companies %>
+            <li id="company-<% loop.index %>" class="comp-item">
+                <% HTML.escape(c.name) %>
+            </li>
+            <% render_depts(c.departments, 0) %>
+        <% END %>
+        </ul>
+    </body>
+</html>
+
