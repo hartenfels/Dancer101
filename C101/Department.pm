@@ -26,11 +26,11 @@ has 'employees' => (
 sub visit {
     my ($self, $visitor) = @_;
     &{$visitor->begin_department}($visitor, $self);
-    for my $e (@{$self->employees}) {
-        $e->visit($visitor);
+    for my $e (@{$self->{employees}}) {
+        C101::Employee::visit($e, $visitor);
     }
-    for my $d (@{$self->departments}) {
-        $d->visit($visitor);
+    for my $d (@{$self->{departments}}) {
+        C101::Department::visit($d, $visitor);
     }
     &{$visitor->end_department}($visitor, $self);
 }

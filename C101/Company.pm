@@ -1,7 +1,6 @@
 package C101::Company;
 use Moose;
 use C101::Department;
-use C101::Employee;
 
 has 'name' => (
     is       => 'rw',
@@ -19,8 +18,8 @@ has 'departments' => (
 sub visit {
     my ($self, $visitor) = @_;
     &{$visitor->begin_company}($visitor, $self);
-    for my $d (@{$self->departments}) {
-        $d->visit($visitor);
+    for my $d (@{$self->{departments}}) {
+        C101::Department::visit($d, $visitor);
     }
     &{$visitor->end_company}($visitor, $self);
 }
