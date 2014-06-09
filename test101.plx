@@ -5,13 +5,8 @@ use Storable;
 use File::Slurp 'slurp';
 use Test::More tests => 8;
 use C101::Sample;
-use C101::Cut           'cut';
-use C101::Depth         'depth';
-use C101::Median        'median';
-use C101::Parsing       'parse';
-use C101::Serialization 'serialize', 'unserialize';
-use C101::Total         'total';
-use C101::Unparsing     'unparse';
+use C101::Operations  qw(cut depth median total serialize unserialize);
+use C101::Persistence qw(serialize unserialize parse unparse);
 
 my $c1 = C101::Sample::create;
 

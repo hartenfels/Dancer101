@@ -6,7 +6,7 @@ use Data::Dumper;
 use File::Slurp;
 use Template;
 use C101::Sample;
-use C101::Serialization 'serialize', 'unserialize';
+use C101::Persistence qw(serialize unserialize);
 
 set( 
     session      => 'Simple',

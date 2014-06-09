@@ -1,4 +1,4 @@
-package C101::Parsing;
+package C101::Persistence;
 use strict;
 use warnings;
 use Data::Structure::Util;
@@ -12,12 +12,14 @@ use C101::Visitor;
 
 use vars qw(@ISA @EXPORT_OK);
 @ISA       = ('Exporter');
-@EXPORT_OK = ('parse');
+@EXPORT_OK = qw(serialize unserialize parse unparse);
 
-sub has_keys {
-    my $hash = shift;
-    for (@_) { return 0 unless exists($hash->{$_}) }
-    return 1;
+sub serialize {
+    Storable::store(@_);
+}
+
+sub unserialize {
+    Storable::retrieve(@_);
 }
 
 sub parse {
@@ -60,6 +62,18 @@ sub parse {
     }
 
     return $hash;
+}
+
+sub unparse {
+    my $object = shift;
+    my $plain  = Data::Structure::Util::unbless(Storable::dclone($object));
+    return JSON::XS->new->utf8->canonical->indent->space_after->encode($plain);
+}
+
+sub has_keys {
+    my $hash = shift;
+    for (@_) { return 0 unless exists($hash->{$_}) }
+    return 1;
 }
 
 1;
