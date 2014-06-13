@@ -8,16 +8,17 @@ use C101::Visitor;
 
 use vars qw(@ISA @EXPORT_OK);
 @ISA       = ('Exporter');
-@EXPORT_OK = qw(cut depth median total uuids serialize unserialize);
+@EXPORT_OK = qw(cut depth median total uuids);
+
 
 sub cut {
     my $visitor = C101::Visitor->new({
         begin_employee => sub {
             my $e = $_[1];
-            $e->salary($e->salary / 2);
+            $e->salary($e->salary / 2) if $e->salary;
         },
     });
-    shift->visit($visitor);
+    $_->visit($visitor) for @_;
 }
 
 sub depth {
@@ -31,7 +32,7 @@ sub depth {
             --$depth;
         },
     });
-    shift->visit($visitor);
+    $_->visit($visitor) for @_;
     return $max;
 }
 
@@ -44,7 +45,7 @@ sub median {
             ++$count;
         },
     });
-    shift->visit($visitor);
+    $_->visit($visitor) for @_;
     return $count ? $total / $count : 0;
 }
 
@@ -55,7 +56,7 @@ sub total {
             $total += $_[1]->salary;
         },
     });
-    shift->visit($visitor);
+    $_->visit($visitor) for @_;
     return $total;
 }
 
@@ -76,4 +77,35 @@ sub uuids {
 }
 
 1;
+__END__
+
+=head1 C101::Operations
+
+Simple feature implementations, like total and cut. Each of the operations takes a list
+of zero or more Companies, Departments and Employees (or a mix of them).
+
+=head2 C<cut(Company|Department|Employee, ...)>
+
+Implements Feature:Cut. Halves all employees' salaries, salaries of 0 are left alone.
+Nothing is returned.
+
+=head2 C<depth(Company|Department|Employee, ...)>
+
+Implements Feature:Depth. Returns the maximum depth of the given objects.
+
+=head2 C<median(Company|Department|Employee, ...)>
+
+Implements Feature:Median. Returns the median salary of all given employees. If there are
+no employees, 0 will be returned.
+
+=head2 C<total(Company|Department|Employee, ...)>
+
+Implements Feature:Total. Returns the sum of all given employees' salaries.
+
+=head2 C<uuids(Company|Department|Employee, ...)>
+
+Returns a reference to a hash mapping from UUIDs to their respective Company, Department
+or Employee. Dies if one of the UUIDs is not actually unique.
+
+=cut
 
