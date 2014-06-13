@@ -2,7 +2,8 @@
 use strict;
 use warnings;
 use Storable;
-use Test::More tests => 8;
+use File::Slurp 'slurp';
+use Test::More tests => 9;
 use C101::Sample;
 use C101::Operations  qw(cut depth median total uuids);
 use C101::Persistence qw(serialize unserialize parse unparse);
@@ -29,4 +30,9 @@ is_deeply(unserialize('serialized.bin'), $c1, 'serialization');
 my $json = unparse($c1);
 my $c3   = parse($json, 'company');
 is_deeply($c3, $c1, 'parsing');
+
+# Need to remove UUIDs and trailing commas to do simple string compare
+$json =~ s/\s*"uuid"\s*:.*//g;
+$json =~ s/,(\n\s*(}|\]))/$1/gm;
+is($json, slurp('sample.json'), 'unparsing');
 
