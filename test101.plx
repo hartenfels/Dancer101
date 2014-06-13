@@ -33,6 +33,6 @@ is_deeply($c3, $c1, 'parsing');
 
 # Need to remove UUIDs and trailing commas to do simple string compare
 $json =~ s/\s*"uuid"\s*:.*//g;
-$json =~ s/,(\n\s*(}|\]))/$1/gm;
+$json =~ s/,(\n\s*(}|]))/$1/gm;
 is($json, slurp('sample.json'), 'unparsing');
 

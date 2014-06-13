@@ -1,0 +1,286 @@
+<?xml version="1.0" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Contribution:Dancer</title>
+<meta http-equiv="content-type" content="text/html; charset=utf-8" />
+<link rev="made" href="mailto:root@localhost" />
+</head>
+
+<body style="background-color: white">
+
+
+<!-- INDEX BEGIN -->
+<div name="index">
+<p><a name="__index__"></a></p>
+
+<ul>
+
+	<li><a href="#contribution_dancer">Contribution:Dancer</a></li>
+	<ul>
+
+		<li><a href="#c101__company">C101::Company</a></li>
+		<ul>
+
+			<li><a href="#properties">Properties</a></li>
+			<li><a href="#visit__self___visitor_">visit($self, $visitor)</a></li>
+		</ul>
+
+		<li><a href="#c101__department">C101::Department</a></li>
+		<ul>
+
+			<li><a href="#properties">Properties</a></li>
+			<li><a href="#visit__self___visitor_">visit($self, $visitor)</a></li>
+		</ul>
+
+		<li><a href="#c101__company">C101::Company</a></li>
+		<ul>
+
+			<li><a href="#properties">Properties</a></li>
+			<li><a href="#visit__self___visitor_">visit($self, $visitor)</a></li>
+		</ul>
+
+		<li><a href="#c101__identifiable">C101::Identifiable</a></li>
+		<ul>
+
+			<li><a href="#properties">Properties</a></li>
+			<li><a href="#renew_uuid__self_"><code>renew_uuid($self)</code></a></li>
+		</ul>
+
+		<li><a href="#c101__operations">C101::Operations</a></li>
+		<ul>
+
+			<li><a href="#cut_company_department_employee______">cut(Company|Department|Employee, ...)</a></li>
+			<li><a href="#depth_company_department_employee______">depth(Company|Department|Employee, ...)</a></li>
+			<li><a href="#median_company_department_employee______">median(Company|Department|Employee, ...)</a></li>
+			<li><a href="#total_company_department_employee______">total(Company|Department|Employee, ...)</a></li>
+			<li><a href="#uuids_company_department_employee______">uuids(Company|Department|Employee, ...)</a></li>
+		</ul>
+
+		<li><a href="#c101__persistence">C101::Persistence</a></li>
+		<ul>
+
+			<li><a href="#serialize__thing___filename___unserialize__filename_">serialize($thing, $filename)&gt;/unserialize($filename)</a></li>
+			<li><a href="#parse__json____type____unparse_company_department_employee_">parse($json, [$type])&gt;/unparse(Company|Department|Employee)</a></li>
+		</ul>
+
+		<li><a href="#c101__sample">C101::Sample</a></li>
+		<li><a href="#c101__visitor">C101::Visitor</a></li>
+	</ul>
+
+</ul>
+
+<hr name="index" />
+</div>
+<!-- INDEX END -->
+
+<p>
+</p>
+<h1><a name="contribution_dancer">Contribution:Dancer</a></h1>
+<p>This documentation describes each of the Perl Module (<code>.pm</code>) files.</p>
+<p>
+</p>
+<h2><a name="c101__company">C101::Company</a></h2>
+<p>A class to model a Company. Is a <a href="#c101__identifiable">C101::Identifiable</a>.</p>
+<p>
+</p>
+<h3><a name="properties">Properties</a></h3>
+<dl>
+<dt><strong><a name="name" class="item">name (Str, required)</a></strong></dt>
+
+<dd>
+<p>The name for the Company.</p>
+</dd>
+<dt><strong><a name="departments" class="item">departments ([C101::Department])</a></strong></dt>
+
+<dd>
+<p>The Company's departments. Defaults to <code>[]</code>.</p>
+</dd>
+</dl>
+<p>
+</p>
+<h3><a name="visit__self___visitor_">visit($self, $visitor)</a></h3>
+<p>Hosts a visit for the given <a href="#c101__visitor">$visitor</a>. Will call <a href="#begin_company"><code>begin_company</code></a>,
+visit all of $self's <a href="#c101__department">departments</a> and then call <a href="#end_company"><code>end_company</code></a>.</p>
+<p>
+</p>
+<h2><a name="c101__department">C101::Department</a></h2>
+<p>A class to model a Department. Is a <a href="#c101__identifiable">C101::Identifiable</a>.</p>
+<p>
+</p>
+<h3><a name="properties">Properties</a></h3>
+<dl>
+<dt><strong>name (Str, required)</strong></dt>
+
+<dd>
+<p>The name for the Department.</p>
+</dd>
+<dt><strong>departments ([C101::Department])</strong></dt>
+
+<dd>
+<p>The Department's subdepartments. Defaults to <code>[]</code>.</p>
+</dd>
+<dt><strong><a name="employees" class="item">employees ([C101::Employee])</a></strong></dt>
+
+<dd>
+<p>The Department's employees. Defaults to <code>[]</code>.</p>
+</dd>
+</dl>
+<p>
+</p>
+<h3><a name="visit__self___visitor_">visit($self, $visitor)</a></h3>
+<p>Hosts a visit for the given <a href="#c101__visitor">$visitor</a>. Will call <a href="#begin_department"><code>begin_department</code></a>,
+visit all of $self's <a href="#c101__employee">employees</a>, <a href="#c101__department">departments</a> and
+then call <a href="#end_department"><code>end_department</code></a>.</p>
+<p>
+</p>
+<h2><a name="c101__company">C101::Company</a></h2>
+<p>A class to model an Employee. Is a <a href="#c101__identifiable">C101::Identifiable</a>.</p>
+<p>
+</p>
+<h3><a name="properties">Properties</a></h3>
+<dl>
+<dt><strong>name (Str, required)</strong></dt>
+
+<dd>
+<p>The Employee's name.</p>
+</dd>
+<dt><strong><a name="address" class="item">address (Str, required)</a></strong></dt>
+
+<dd>
+<p>The Employee's address.</p>
+</dd>
+<dt><strong><a name="salary" class="item">salary (UnsignedNum, required)</a></strong></dt>
+
+<dd>
+<p>The Employee's salary. Cannot be negative.</p>
+</dd>
+</dl>
+<p>
+</p>
+<h3><a name="visit__self___visitor_">visit($self, $visitor)</a></h3>
+<p>Hosts a visit for the given <a href="#c101__visitor">$visitor</a>. Will call <a href="#begin_employee"><code>begin_employee</code></a> and
+then immediately call <a href="#end_employee"><code>end_employee</code></a>.</p>
+<p>
+</p>
+<h2><a name="c101__identifiable">C101::Identifiable</a></h2>
+<p>Base class for Companies, Departments and Employees. Gives the object a UUID (universally
+unique identifier) when it is constructed. UUIDs are represented as strings.</p>
+<p>
+</p>
+<h3><a name="properties">Properties</a></h3>
+<dl>
+<dt><strong><a name="uuid" class="item">uuid (Str, read-only)</a></strong></dt>
+
+<dd>
+<p>A UUID for the object. A new UUID will be generated if none is given to the constructor.</p>
+</dd>
+</dl>
+<p>
+</p>
+<h3><a name="renew_uuid__self_"><code>renew_uuid($self)</code></a></h3>
+<p>Creates and sets new UUID for this object. The old UUID is returned.</p>
+<p>
+</p>
+<h2><a name="c101__operations">C101::Operations</a></h2>
+<p>Simple feature implementations, like total and cut. Each of the operations takes a list
+of zero or more Companies, Departments and Employees (or a mix of them).</p>
+<p>
+</p>
+<h3><a name="cut_company_department_employee______">cut(Company|Department|Employee, ...)</a></h3>
+<p>Implements Feature:Cut. Halves all employees' salaries, salaries of 0 are left alone.
+Nothing is returned.</p>
+<p>
+</p>
+<h3><a name="depth_company_department_employee______">depth(Company|Department|Employee, ...)</a></h3>
+<p>Implements Feature:Depth. Returns the maximum depth of the given objects.</p>
+<p>
+</p>
+<h3><a name="median_company_department_employee______">median(Company|Department|Employee, ...)</a></h3>
+<p>Implements Feature:Median. Returns the median salary of all given employees. If there are
+no employees, 0 will be returned.</p>
+<p>
+</p>
+<h3><a name="total_company_department_employee______">total(Company|Department|Employee, ...)</a></h3>
+<p>Implements Feature:Total. Returns the sum of all given employees' salaries.</p>
+<p>
+</p>
+<h3><a name="uuids_company_department_employee______">uuids(Company|Department|Employee, ...)</a></h3>
+<p>Returns a reference to a hash mapping from UUIDs to their respective Company, Department
+or Employee. Dies if one of the UUIDs is not actually unique.</p>
+<p>
+</p>
+<h2><a name="c101__persistence">C101::Persistence</a></h2>
+<p>Contains serialization and parsing features.</p>
+<p>
+</p>
+<h3><a name="serialize__thing___filename___unserialize__filename_">serialize($thing, $filename)&gt;/unserialize($filename)</a></h3>
+<p>Implements Feature:Serialization. Serializes the given thing to the given file and
+unserializes a thing from the given file. The thing must be some kind of scalar.</p>
+<p>
+</p>
+<h3><a name="parse__json____type____unparse_company_department_employee_">parse($json, [$type])&gt;/unparse(Company|Department|Employee)</a></h3>
+<p>Implements Feature:Parsing and Feature:Unparsing.
+Parses the given JSON string into a Company, Department or Employee object and unparses
+such an object into a JSON string. For parsing, the type of the parsed object can be
+given (<code>'company'</code>, <code>'department'</code> or <code>'employee'</code>), otherwise it will be guessed.</p>
+<p>
+</p>
+<h2><a name="c101__sample">C101::Sample</a></h2>
+<p>Calling <code>sample()</code> will return a newly created sample Company. It's always the same
+company, only the UUIDs will differ.</p>
+<p>
+</p>
+<h2><a name="c101__visitor">C101::Visitor</a></h2>
+<p>Visitor class for traversing the object tree of Companies, Departments and Employees.</p>
+<p>The class provides the following six callbacks that are called when the traversal enters
+or exits the given type ($self being the visitor itself):</p>
+<dl>
+<dt><strong><a name="begin_company" class="item"><code>begin_company($self, $company)</code></a></strong></dt>
+
+<dt><strong><a name="begin_department" class="item"><code>begin_department($self, $department)</code></a></strong></dt>
+
+<dt><strong><a name="begin_employee" class="item"><code>begin_employee($self, $employee)</code></a></strong></dt>
+
+<dt><strong><a name="end_employee" class="item"><code>end_employee($self, $employee)</code></a></strong></dt>
+
+<dt><strong><a name="end_department" class="item"><code>end_department($self, $department)</code></a></strong></dt>
+
+<dt><strong><a name="end_company" class="item"><code>end_company($self, $company)</code></a></strong></dt>
+
+</dl>
+<p>To actually visit something, fill the callbacks you need with appropriate subs and call a
+Company's, Department's or Employee's <code>visit</code> function. For example, a visitor to print
+the structure of an object tree <code>$obj</code>:</p>
+<pre>
+    my $depth   = 0;
+    my $visitor = C101::Visitor-&gt;new({
+        begin_company =&gt; sub {
+            my ($self, $company) = @_;
+            print &quot;\t&quot; x $depth++, &quot;Company: ${\$company-&gt;name}\n&quot;;
+        },
+        begin_department =&gt; sub {
+            my ($self, $department) = @_;
+            print &quot;\t&quot; x $depth++, &quot;Department: ${\$department-&gt;name}\n&quot;;
+        },
+        begin_employee =&gt; sub {
+            my ($self, $employee) = @_;
+            print &quot;\t&quot; x $depth++, &quot;Employee: ${\$employee-&gt;name}\n&quot;;
+        },
+        end_employee =&gt; sub {
+            my ($self, $employee) = @_;
+            print &quot;\t&quot; x $depth,   &quot;Address: ${\$employee-&gt;salary}\n&quot;;
+            print &quot;\t&quot; x $depth--,  &quot;Salary: ${\$employee-&gt;salary}\n&quot;;
+        },
+        end_department =&gt; sub {
+            --$depth;
+        },
+        end_company =&gt; sub {
+            --$depth;
+        },
+    });
+    $obj-&gt;visit($visitor);</pre>
+
+</body>
+
+</html>

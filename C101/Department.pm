@@ -29,14 +29,41 @@ has 'employees' => (
 sub visit {
     my ($self, $visitor) = @_;
     &{$visitor->begin_department}($visitor, $self);
-    for my $e (@{$self->{employees}}) {
-        C101::Employee::visit($e, $visitor);
-    }
-    for my $d (@{$self->{departments}}) {
-        C101::Department::visit($d, $visitor);
-    }
+    C101::Employee::visit  ($_, $visitor) for @{$self->{employees  }};
+    C101::Department::visit($_, $visitor) for @{$self->{departments}};
     &{$visitor->end_department}($visitor, $self);
 }
 
 1;
+__END__
+
+=head2 C101::Department
+
+A class to model a Department. Is a L</C101::Identifiable>.
+
+=head3 Properties
+
+=over 4
+
+=item name (Str, required)
+
+The name for the Department.
+
+=item departments ([C101::Department])
+
+The Department's subdepartments. Defaults to C<[]>.
+
+=item employees ([C101::Employee])
+
+The Department's employees. Defaults to C<[]>.
+
+=back
+
+=head3 visit($self, $visitor)
+
+Hosts a visit for the given L<$visitor|/C101::Visitor>. Will call C<begin_department>,
+visit all of $self's L<employees|/C101::Employee>, L<departments|/C101::Department> and
+then call C<end_department>.
+
+=cut
 

@@ -3,7 +3,6 @@ use strict;
 use warnings;
 use feature 'state';
 use Exporter;
-use Data::UUID;
 use C101::Visitor;
 
 use vars qw(@ISA @EXPORT_OK);
@@ -79,30 +78,30 @@ sub uuids {
 1;
 __END__
 
-=head1 C101::Operations
+=head2 C101::Operations
 
 Simple feature implementations, like total and cut. Each of the operations takes a list
 of zero or more Companies, Departments and Employees (or a mix of them).
 
-=head2 C<cut(Company|Department|Employee, ...)>
+=head3 cut(Company|Department|Employee, ...)
 
 Implements Feature:Cut. Halves all employees' salaries, salaries of 0 are left alone.
 Nothing is returned.
 
-=head2 C<depth(Company|Department|Employee, ...)>
+=head3 depth(Company|Department|Employee, ...)
 
 Implements Feature:Depth. Returns the maximum depth of the given objects.
 
-=head2 C<median(Company|Department|Employee, ...)>
+=head3 median(Company|Department|Employee, ...)
 
 Implements Feature:Median. Returns the median salary of all given employees. If there are
 no employees, 0 will be returned.
 
-=head2 C<total(Company|Department|Employee, ...)>
+=head3 total(Company|Department|Employee, ...)
 
 Implements Feature:Total. Returns the sum of all given employees' salaries.
 
-=head2 C<uuids(Company|Department|Employee, ...)>
+=head3 uuids(Company|Department|Employee, ...)
 
 Returns a reference to a hash mapping from UUIDs to their respective Company, Department
 or Employee. Dies if one of the UUIDs is not actually unique.

@@ -73,4 +73,12 @@ sub create {
 }
 
 1;
+__END__
+
+=head2 C101::Sample
+
+Calling C<sample()> will return a newly created sample Company. It's always the same
+company, only the UUIDs will differ.
+
+=cut
 

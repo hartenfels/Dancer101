@@ -81,16 +81,16 @@ sub _has_keys {
 1;
 __END__
 
-=head1 C101::Persistence
+=head2 C101::Persistence
 
 Contains serialization and parsing features.
 
-=head2 C<serialize($thing, $filename)>/C<unserialize($filename)>
+=head3 serialize($thing, $filename)>/unserialize($filename)
 
 Implements Feature:Serialization. Serializes the given thing to the given file and
 unserializes a thing from the given file. The thing must be some kind of scalar.
 
-=head2 C<parse($json, [$type])>/C<unparse(Company|Department|Employee)>
+=head3 parse($json, [$type])>/unparse(Company|Department|Employee)
 
 Implements Feature:Parsing and Feature:Unparsing.
 Parses the given JSON string into a Company, Department or Employee object and unparses
