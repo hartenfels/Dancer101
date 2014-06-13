@@ -2,13 +2,14 @@
 use strict;
 use warnings;
 use Storable;
-use File::Slurp 'slurp';
 use Test::More tests => 8;
 use C101::Sample;
-use C101::Operations  qw(cut depth median total serialize unserialize);
+use C101::Operations  qw(cut depth median total uuids serialize unserialize);
 use C101::Persistence qw(serialize unserialize parse unparse);
 
 my $c1 = C101::Sample::create;
+eval { uuids($c1) };
+ok(!$@, 'uuids');
 
 my $c2 = Storable::dclone($c1);
 is_deeply($c2, $c1, 'clone');
@@ -26,8 +27,6 @@ serialize($c1, 'serialized.bin');
 is_deeply(unserialize('serialized.bin'), $c1, 'serialization');
 
 my $json = unparse($c1);
-is($json, slurp('sample.json'), 'unparsing');
-
-my $c3 = parse($json, 'company');
+my $c3   = parse($json, 'company');
 is_deeply($c3, $c1, 'parsing');
 

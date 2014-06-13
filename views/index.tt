@@ -1,22 +1,22 @@
 <!DOCTYPE html>
 <% USE HTML %>
 
-<% MACRO render_empls(empls, depth, idx) BLOCK %><% IF d.employees.size %>
+<% MACRO render_empls(empls) BLOCK %><% IF d.employees.size %>
     <ul class="employees">
     <% FOREACH e IN d.employees %>
-        <li id="employee-<% depth %>-<% idx %>-<% loop.index %>" class="empl-item">
+        <li id="employee-<% e.uuid %>" class="empl-item">
             <% HTML.escape(e.name) %>
-            <a class="edit" href="/edit/<% depth %>/<% idx %>/<% loop.index %>">Edit</a>
+            <a class="edit" href="/edit/<% e.uuid %>">Edit</a>
             <ul class="employee-attributes">
-                <li id="address-<% depth %>-<% idx %>-<% loop.index %>" class="addr-item">
+                <li id="address-<% e.uuid %>" class="addr-item">
                     <% HTML.escape(e.address) %>
-                    <a class="edit" href="/edit/a/<% depth %>/<% idx %>/<% loop.index %>">
+                    <a class="edit" href="/edit/address/<% e.uuid %>">
                         Edit
                     </a>
                 </li>
-                <li id="salary-<% depth %>-<% idx %>-<% loop.index %>" class="slry-item">
+                <li id="salary-<% e.uuid %>" class="slry-item">
                     <% HTML.escape(e.salary) %>
-                    <a class="edit" href="/edit/s/<% depth %>/<% idx %>/<% loop.index %>">
+                    <a class="edit" href="/edit/salary/<% e.uuid %>">
                         Edit
                     </a>
                 </li>
@@ -26,16 +26,16 @@
     </ul>
 <% END %><% END %>
 
-<% MACRO render_depts(depts, depth) BLOCK %><% IF depts.size %>
+<% MACRO render_depts(depts) BLOCK %><% IF depts.size %>
     <ul class="departments">
     <% FOREACH d IN depts %>
-        <li id="department-<% depth %>-<% loop.index %>" class="dept-item">
+        <li id="department-<% d.uuid %>" class="dept-item">
             <% HTML.escape(d.name) %>
-            <a class="edit" href="/edit/<% depth %>/<% loop.index %>">Edit</a>
-            <a class="edit" href="/add/e/<% depth %>/<% loop.index %>">+Employee</a>
-            <a class="edit" href="/add/d/<% depth %>/<% loop.index %>">+Department</a>
-            <% render_empls(d.employees, depth, loop.index) %>
-            <% render_depts(d.departments, depth + 1) %>
+            <a class="edit" href="/edit/<% d.uuid %>">Edit</a>
+            <a class="edit" href="/add/employee/<% d.uuid %>">+Employee</a>
+            <a class="edit" href="/add/department/<% d.uuid %>">+Department</a>
+            <% render_empls(d.employees) %>
+            <% render_depts(d.departments) %>
         </li>
     <% END %>
     </ul>
@@ -70,16 +70,17 @@
     <body>
         <h1>Contribution:dancer</h1>
 
-        <noscript>This page works better with JavaScript enabled.</noscript>
+        <noscript><p>This page works better with JavaScript enabled.</p></noscript>
 
+        <a class ="edit" href="/add">+Company</a>
         <div id="company-tree">
             <ul class="companies">
             <% FOREACH c IN companies %>
-                <li id="company-<% loop.index %>" class="comp-item">
+                <li id="company-<% c.uuid %>" class="comp-item">
                     <% HTML.escape(c.name) %>
-                    <a class="edit" href="/edit/<% loop.index %>">Edit</a>
-                    <a class="edit" href="/add/<% loop.index %>">+Department</a>
-                    <% render_depts(c.departments, 0) %>
+                    <a class="edit" href="/edit/<% c.uuid %>">Edit</a>
+                    <a class="edit" href="/add/<% c.uuid %>">+Department</a>
+                    <% render_depts(c.departments) %>
                 </li>
             <% END %>
             </ul>

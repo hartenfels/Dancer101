@@ -1,12 +1,14 @@
 package C101::Operations;
 use strict;
 use warnings;
+use feature 'state';
 use Exporter;
+use Data::UUID;
 use C101::Visitor;
 
 use vars qw(@ISA @EXPORT_OK);
 @ISA       = ('Exporter');
-@EXPORT_OK = qw(cut depth median total serialize unserialize);
+@EXPORT_OK = qw(cut depth median total uuids serialize unserialize);
 
 sub cut {
     my $visitor = C101::Visitor->new({
@@ -55,6 +57,22 @@ sub total {
     });
     shift->visit($visitor);
     return $total;
+}
+
+sub uuids {
+    my $uuids    = {};
+    my $callback = sub {
+        my $u = $_[1]->uuid;
+        die "$u is not unique" if $uuids->{$u};
+        $uuids->{$u} = $_[1];
+    };
+    my $visitor  = C101::Visitor->new({
+        begin_company    => $callback,
+        begin_department => $callback,
+        begin_employee   => $callback,
+    });
+    $_->visit($visitor) for @_;
+    return $uuids;
 }
 
 1;

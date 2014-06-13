@@ -1,6 +1,9 @@
 package C101::Company;
 use Moose;
 use C101::Department;
+use C101::Identifiable;
+
+extends 'C101::Identifiable';
 
 has 'name' => (
     is       => 'rw',

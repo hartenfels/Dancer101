@@ -7,6 +7,7 @@ use File::Slurp;
 use Template;
 use C101::Sample;
 use C101::Persistence qw(serialize unserialize);
+use C101::Operations  qw(uuids);
 
 set( 
     session      => 'Simple',
@@ -19,9 +20,12 @@ set(
     companies    => 'companies.bin',
 );
 
+
 my $companies = -e setting('companies')
               ? unserialize(setting('companies'))
               : [ C101::Sample::create ];
+my $uuids     = uuids(@$companies);
+
 
 get '/' => sub {
     template 'index.tt' => {
