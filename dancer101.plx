@@ -31,14 +31,14 @@ my $uuids     = uuids(@$companies);
 
 
 sub entries {
-    my $list    = shift;
+    my ($list, $obj) = @_;
     my $entries = [];
     for (my $i = 0; $i < scalar @$list; $i += 2) {
-        $_ = $list->[$i];
+        my $key = $list->[$i];
         push($entries => {
-            name  => $_,
-            label => ucfirst,
-            value => param($_),
+            name  => $key,
+            label => ucfirst($key),
+            value => defined($_ = param($key)) ? $_ : $obj && $obj->$key,
         });
     }
     return entries => $entries;
@@ -79,59 +79,88 @@ sub validate {
                     $result = undef;
                 }
             }
-            default { die "Don't know how to validate $key => $type" }
+            default { die "Don't know how to validate $type" }
         }
     }
     return $result;
 }
 
-sub handle_form($) {
-    my $args = shift;
-
+sub handle_add($) {
+    my $args   = shift;
+    my $type   = $args->{type};
     my $uuid   = param('uuid');
+    my $list   = $args->{list};
     my $parent = $uuid ? $uuids->{$uuid} : undef;
-    my $parkey = $args->{parent};
-    if ($parkey && !$parent) {
+
+    if ($list && !$parent) {
         set_message("The UUID $uuid does not correspond to anything. "
                   . 'Either you accessed a broken link or the object was modified.');
         return redirect '/';
     }
 
-    my $type = $args->{type};
-    my $edit = $args->{edit};
     if (request->method eq 'POST') {
         my $valid = validate($args->{validate});
         if (defined $valid) {
-            if ($edit) {
-                # TODO
+            my $obj = eval { "C101::$type"->new($valid) };
+            if ($@) {
+                $@ =~ /^([^\n]*)/;
+                set_message("Error: $1");
             } else {
-                my $obj = eval { "C101::$type"->new($valid) };
-                if ($@) {
-                    $@ =~ /^([^\n]*)/;
-                    set_message("Error: $1");
-                } else {
-                    push(($parkey ? $parent->$parkey : $companies), $obj);
-                    
-                    delete($uuids->{$obj->renew_uuid()}) if $edit;
-                    $uuids->{$obj->uuid} = $obj;
-
-                    return redirect '/';
-                }
+                push(($list ? $parent->$list : $companies), $obj);
+                $uuids->{$obj->uuid} = $obj;
+                return redirect '/';
             }
         }
     }
 
-    my $title;
-    if ($edit) {
-        $title = "Edit $type";
-    } else {
-        $title = $parkey ? "Add $type to ${\$parent->name}" : "Create $type";
+    template 'form.tt' => {
+        title => $list ? "Add $type to ${\$parent->name}" : "Create $type",
+        messages,
+        entries($args->{validate}),
+    };
+}
+
+sub handle_edit($) {
+    my $args = shift;
+    my $type = $args->{type};
+    my $uuid = param('uuid');
+    my $obj  = $uuid ? $uuids->{$uuid} : undef;
+
+    if (!$obj || !$obj->isa("C101::$type")) {
+        set_message("The UUID $uuid does not correspond to any $type. "
+                  . 'Either you accessed a broken link or the object was modified.');
+        return redirect '/';
+    }
+
+    if (request->method eq 'POST') {
+        my $valid = validate($args->{validate});
+        if (defined $valid) {
+            my $old = {};
+            eval {
+                while (my ($k, $v) = each($valid)) {
+                    $old->{$k} = $obj->$k;
+                    $obj->$k($v);
+                }
+            };
+            if ($@) {
+                $@ =~ /^([^\n]*)/;
+                set_message("Error: $1");
+                # attempt to restore old values
+                while (my ($k, $v)) {
+                    eval { $obj->$k($old->{$k}) if $old->{$k} };
+                }
+            } else {
+                delete $uuids->{$obj->renew_uuid};
+                $uuids->{$obj->uuid} = $obj;
+                return redirect '/';
+            }
+        }
     }
 
     template 'form.tt' => {
-        title => $title,
-        messages(),
-        entries($args->{validate}),
+        title => sprintf($args->{title}, $obj->name),
+        messages,
+        entries($args->{validate}, $obj),
     };
 }
 
@@ -140,33 +169,70 @@ get '/' => sub {
     template 'index.tt' => {
         title     => 'Contribution:Dancer',
         companies => $companies,
-        messages(),
+        messages,
     };
 };
 
 any ['get', 'post'] => '/add' => sub {
-    return handle_form{
+    return handle_add {
         type     => 'Company',
-        edit     => 0,
+        validate => [name => 'Str'],
+    };
+};
+
+any ['get', 'post'] => '/edit/company/:uuid' => sub {
+    return handle_edit {
+        title    => 'Edit Company %s',
+        type     => 'Company',
         validate => [name => 'Str'],
     };
 };
 
 any ['get', 'post'] => '/add/department/:uuid' => sub {
-    return handle_form{
+    return handle_add {
         type     => 'Department',
-        parent   => 'departments',
-        edit     => 0,
+        list     => 'departments',
+        validate => [name => 'Str'],
+    };
+};
+
+any ['get', 'post'] => '/edit/department/:uuid' => sub {
+    return handle_edit {
+        title    => 'Edit Department %s',
+        type     => 'Department',
         validate => [name => 'Str'],
     };
 };
 
 any ['get', 'post'] => '/add/employee/:uuid' => sub {
-    return handle_form{
+    return handle_add {
         type     => 'Employee',
-        parent   => 'employees',
-        edit     => 0,
+        list     => 'employees',
         validate => [name => 'Str', address => 'Str', salary => 'UnsignedNum'],
+    };
+};
+
+any ['get', 'post'] => '/edit/employee/:uuid' => sub {
+    return handle_edit {
+        title    => 'Edit Employee %s',
+        type     => 'Employee',
+        validate => [name => 'Str', address => 'Str', salary => 'UnsignedNum'],
+    };
+};
+
+any ['get', 'post'] => '/edit/address/:uuid' => sub {
+    return handle_edit {
+        title    => 'Edit Address of Employee %s',
+        type     => 'Employee',
+        validate => [address => 'Str'],
+    };
+};
+
+any ['get', 'post'] => '/edit/salary/:uuid' => sub {
+    return handle_edit {
+        title    => 'Edit Salary of Employee %s',
+        type     => 'Employee',
+        validate => [salary => 'UnsignedNum'],
     };
 };
 
