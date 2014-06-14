@@ -33,8 +33,8 @@ my $uuids     = uuids(@$companies);
 sub entries {
     my ($list, $obj) = @_;
     my $entries = [];
-    for (my $i = 0; $i < scalar @$list; $i += 2) {
-        my $key = $list->[$i];
+    for my $pair (@$list) {
+        my $key = $pair->[0];
         push($entries => {
             name  => $key,
             label => ucfirst($key),
@@ -58,9 +58,8 @@ sub messages {
 sub validate {
     my $list   = shift;
     my $result = {};
-    for (my $i = 0; $i < scalar @$list; $i += 2) {
-        my $key   = $list->[$i];
-        my $type  = $list->[$i + 1];
+    for my $pair (@$list) {
+        my ($key, $type) = @$pair;
         my $value = param($key);
         given ($type) {
             when ('Str') {
@@ -176,7 +175,7 @@ get '/' => sub {
 any ['get', 'post'] => '/add' => sub {
     return handle_add {
         type     => 'Company',
-        validate => [name => 'Str'],
+        validate => [[name => 'Str']],
     };
 };
 
@@ -184,7 +183,7 @@ any ['get', 'post'] => '/edit/company/:uuid' => sub {
     return handle_edit {
         title    => 'Edit Company %s',
         type     => 'Company',
-        validate => [name => 'Str'],
+        validate => [[name => 'Str']],
     };
 };
 
@@ -192,7 +191,7 @@ any ['get', 'post'] => '/add/department/:uuid' => sub {
     return handle_add {
         type     => 'Department',
         list     => 'departments',
-        validate => [name => 'Str'],
+        validate => [[name => 'Str']],
     };
 };
 
@@ -200,7 +199,7 @@ any ['get', 'post'] => '/edit/department/:uuid' => sub {
     return handle_edit {
         title    => 'Edit Department %s',
         type     => 'Department',
-        validate => [name => 'Str'],
+        validate => [[name => 'Str']],
     };
 };
 
@@ -208,7 +207,7 @@ any ['get', 'post'] => '/add/employee/:uuid' => sub {
     return handle_add {
         type     => 'Employee',
         list     => 'employees',
-        validate => [name => 'Str', address => 'Str', salary => 'UnsignedNum'],
+        validate => [[name => 'Str'], [address => 'Str'], [salary => 'UnsignedNum']],
     };
 };
 
@@ -216,7 +215,7 @@ any ['get', 'post'] => '/edit/employee/:uuid' => sub {
     return handle_edit {
         title    => 'Edit Employee %s',
         type     => 'Employee',
-        validate => [name => 'Str', address => 'Str', salary => 'UnsignedNum'],
+        validate => [[name => 'Str'], [address => 'Str'], [salary => 'UnsignedNum']],
     };
 };
 
@@ -224,7 +223,7 @@ any ['get', 'post'] => '/edit/address/:uuid' => sub {
     return handle_edit {
         title    => 'Edit Address of Employee %s',
         type     => 'Employee',
-        validate => [address => 'Str'],
+        validate => [[address => 'Str']],
     };
 };
 
@@ -232,7 +231,7 @@ any ['get', 'post'] => '/edit/salary/:uuid' => sub {
     return handle_edit {
         title    => 'Edit Salary of Employee %s',
         type     => 'Employee',
-        validate => [salary => 'UnsignedNum'],
+        validate => [[salary => 'UnsignedNum']],
     };
 };
 
