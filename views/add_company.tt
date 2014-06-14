@@ -1,0 +1,6 @@
+<form method="post">
+    <label for="name">Name</label>
+    <input type="text"   value="<% name %>" name="name">
+    <input type="submit" value="Submit">
+</form>
+

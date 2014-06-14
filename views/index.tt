@@ -1,6 +1,4 @@
-<!DOCTYPE html>
 <% USE HTML %>
-
 <% MACRO render_empls(empls) BLOCK %><% IF d.employees.size %>
     <ul class="employees">
     <% FOREACH e IN d.employees %>
@@ -41,51 +39,19 @@
     </ul>
 <% END %><% END %>
 
-<html>
-    <head>
-        <meta charset="utf-8">
+<noscript><p>This page works better with JavaScript enabled.</p></noscript>
 
-        <link rel="stylesheet"
-             href="//ajax.googleapis.com/ajax/libs/jqueryui/1.10.4/themes/smoothness/jquery-ui.css"
-             type="text/css">
-        <link  href="/jstree/themes/default/style.css"
-                rel="stylesheet"
-               type="text/css">
-        <link  href="/dancer.css"
-                rel="stylesheet"
-               type="text/css">
-
-        <script src="//ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"
-               type="text/javascript"></script>
-        <script src="//ajax.googleapis.com/ajax/libs/jqueryui/1.10.4/jquery-ui.min.js"
-               type="text/javascript"></script>
-        <script src="/jstree/jstree.min.js"
-               type="text/javascript"></script>
-        <script src="/dancer.js"
-               type="text/javascript"></script>
-
-        <title>Contribution:dancer</title>
-    </head>
-
-    <body>
-        <h1>Contribution:dancer</h1>
-
-        <noscript><p>This page works better with JavaScript enabled.</p></noscript>
-
-        <a class ="edit" href="/add">+Company</a>
-        <div id="company-tree">
-            <ul class="companies">
-            <% FOREACH c IN companies %>
-                <li id="company-<% c.uuid %>" class="comp-item">
-                    <% HTML.escape(c.name) %>
-                    <a class="edit" href="/edit/<% c.uuid %>">Edit</a>
-                    <a class="edit" href="/add/<% c.uuid %>">+Department</a>
-                    <% render_depts(c.departments) %>
-                </li>
-            <% END %>
-            </ul>
-        </div>
-
-    </body>
-</html>
+<a class ="edit" href="/add">+Company</a>
+<div id="company-tree">
+    <ul class="companies">
+    <% FOREACH c IN companies %>
+        <li id="company-<% c.uuid %>" class="comp-item">
+            <% HTML.escape(c.name) %>
+            <a class="edit" href="/edit/<% c.uuid %>">Edit</a>
+            <a class="edit" href="/add/department/<% c.uuid %>">+Department</a>
+            <% render_depts(c.departments) %>
+        </li>
+    <% END %>
+    </ul>
+</div>
 
