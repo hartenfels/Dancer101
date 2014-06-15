@@ -4,10 +4,11 @@
     <% FOREACH e IN entries %>
     <div id="entry-<% e.name %>" class="form-entry">
         <label for="<% e.name %>"><% e.label %></label>
-        <input type="text" value="<% e.value %>" name="<% e.name %>">
+        <input type="text" value="<% HTML.escape(e.value) %>" name="<% e.name %>">
     </div>
     <% END %>
 
     <input type="submit" value="Submit">
+    <a href="/">Cancel</a>
 </form>
 

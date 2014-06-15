@@ -32,9 +32,9 @@ has 'salary' => (
 );
 
 sub visit {
-    my ($self, $visitor) = @_;
-    &{$visitor->begin_employee}($visitor, $self);
-    &{$visitor->end_employee}  ($visitor, $self);
+    my ($self, $visitor, $parent, $index) = @_;
+    &{$visitor->begin_employee}($visitor, $self, $parent, $index);
+    &{$visitor->end_employee}  ($visitor, $self, $parent, $index);
 }
 
 1;

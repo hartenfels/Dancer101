@@ -7,7 +7,7 @@ use C101::Visitor;
 
 use vars qw(@ISA @EXPORT_OK);
 @ISA       = ('Exporter');
-@EXPORT_OK = qw(cut depth median total uuids);
+@EXPORT_OK = qw(cut depth median remove total uuids);
 
 
 sub cut {
@@ -46,6 +46,25 @@ sub median {
     });
     $_->visit($visitor) for @_;
     return $count ? $total / $count : 0;
+}
+
+sub remove {
+    my ($should_remove, $list) = @_;
+
+    my $callback = sub {
+        my (undef, $thing, $list, $index) = @_;
+        splice($list, $$index--, 1) if &$should_remove($thing);
+    };
+
+    my $visitor = C101::Visitor->new({
+        begin_company    => $callback,
+        begin_department => $callback,
+        begin_employee   => $callback,
+    });
+
+    for (my $i = 0; $i < @$list; ++$i) {
+        $list->[$i]->visit($visitor, $list, \$i);
+    }
 }
 
 sub total {

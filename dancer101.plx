@@ -1,15 +1,15 @@
 #!/usr/bin/perl
 use strict;
 use warnings;
-use feature qw(state switch);
+use feature           qw(state switch);
 use Dancer;
-use Data::Dumper;
 use File::Slurp;
+use List::Util        qw(first);
 use Scalar::Util      qw(looks_like_number);
 use Template;
 use C101::Sample;
 use C101::Persistence qw(serialize unserialize);
-use C101::Operations  qw(uuids);
+use C101::Operations  qw(remove uuids);
 
 set( 
     session      => 'Simple',
@@ -232,6 +232,33 @@ any ['get', 'post'] => '/edit/salary/:uuid' => sub {
         title    => 'Edit Salary of Employee %s',
         type     => 'Employee',
         validate => [[salary => 'UnsignedNum']],
+    };
+};
+
+any ['get', 'post'] => '/delete/:uuid' => sub {
+    my $uuid = param('uuid');
+    my $obj  = $uuid ? $uuids->{$uuid} : undef;
+
+    if (!$obj) {
+        set_message("The UUID $uuid does not correspond to anything. "
+                  . 'Either you accessed a broken link or the object was modified.');
+        return redirect '/';
+    }
+
+    if (request->method eq 'POST') {
+        $obj->visit(C101::Visitor->new({
+            begin_company    => sub { delete $uuids->{$_[1]->uuid} },
+            begin_department => sub { delete $uuids->{$_[1]->uuid} },
+            begin_employee   => sub { delete $uuids->{$_[1]->uuid} },
+        }));
+        remove(sub { $_[0] == $obj }, $companies);
+        return redirect '/';
+    }
+
+    template 'delete.tt' => {
+        title  => "Deletion of ${\$obj->name}",
+        object => $obj,
+        messages,
     };
 };
 

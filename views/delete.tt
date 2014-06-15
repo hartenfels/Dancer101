@@ -1,0 +1,7 @@
+<% USE HTML %>
+<form method="post">
+    <p>Really delete <% HTML.escape(object.name) %>?</p>
+    <input type="submit" value="Delete">
+    <a href="/">Cancel</a>
+</form>
+

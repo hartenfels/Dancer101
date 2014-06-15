@@ -19,10 +19,14 @@ has 'departments' => (
 );
 
 sub visit {
-    my ($self, $visitor) = @_;
-    &{$visitor->begin_company}($visitor, $self);
-    C101::Department::visit($_, $visitor) for @{$self->{departments}};
-    &{$visitor->end_company}($visitor, $self);
+    my ($self, $visitor, $parent, $index) = @_;
+    my $depts = $self->{departments};
+
+    &{$visitor->begin_company}($visitor, $self, $parent, $index);
+    for (my $i = 0; $i < @$depts; ++$i) {
+        C101::Department::visit($depts->[$i], $visitor, $depts, \$i);
+    }
+    &{$visitor->end_company}($visitor, $self, $parent, $index);
 }
 
 1;
