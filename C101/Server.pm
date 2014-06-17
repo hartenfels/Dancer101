@@ -7,6 +7,7 @@ use Scalar::Util      qw(looks_like_number);
 use Template;
 use C101::Operations  qw(remove uuids);
 use C101::Persistence qw(serialize unserialize);
+use C101::Sample;
 
 
 has 'companies' => (

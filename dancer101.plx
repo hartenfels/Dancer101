@@ -1,10 +1,8 @@
 #!/usr/bin/perl
 use strict;
 use warnings;
-use feature               qw(switch);
 use Dancer;
 use Dancer::Plugin::Ajax;
-use C101::Sample;
 use C101::Server;
 
 set( 
