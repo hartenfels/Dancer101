@@ -1,4 +1,4 @@
-var dancer = function() {
+var dancer = function($) {
 
 var types = {
     COMPANY   : 0x1,
@@ -131,7 +131,7 @@ var getContextMenu = function(node) {
 };
 
 
-var init = function() {
+return function() {
     $('noscript').remove();
     $('.edit'   ).remove();
 
@@ -147,10 +147,7 @@ var init = function() {
     });
 };
 
-
-return init;
-
-}();
+}($);
 
 $(dancer);
 
