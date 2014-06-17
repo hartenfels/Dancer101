@@ -1,15 +1,16 @@
 #!/usr/bin/perl
 use strict;
 use warnings;
-use feature           qw(state switch);
+use feature               qw(state switch);
 use Dancer;
+use Dancer::Plugin::Ajax;
 use File::Slurp;
-use List::Util        qw(first);
-use Scalar::Util      qw(looks_like_number);
+use List::Util            qw(first);
+use Scalar::Util          qw(looks_like_number);
 use Template;
 use C101::Sample;
-use C101::Persistence qw(serialize unserialize);
-use C101::Operations  qw(remove uuids);
+use C101::Persistence     qw(serialize unserialize);
+use C101::Operations      qw(remove uuids);
 
 set( 
     session      => 'Simple',
@@ -44,15 +45,15 @@ sub entries {
     return entries => $entries;
 }
 
-sub set_message {
-    session(messages => []) unless session('messages');
-    push(session('messages'), $_) for @_;
-}
-
 sub messages {
     my $messages = session('messages');
     session(messages => []);
     return messages => $messages;
+}
+
+sub set_message {
+    session(messages => []) unless session('messages');
+    push(session('messages'), $_) for @_;
 }
 
 sub validate {
@@ -64,7 +65,7 @@ sub validate {
         given ($type) {
             when ('Str') {
                 if ($value =~ /^\s*(.+?)\s*$/) {
-                    $result->{$key} = $value if defined $result;
+                    $result->{$key} = $1 if defined $result;
                 } else {
                     set_message("Please enter a non-empty $key.");
                     $result = undef;
@@ -112,8 +113,10 @@ sub handle_add($) {
         }
     }
 
+    content_type('text/html');
     template 'form.tt' => {
         title => $list ? "Add $type to ${\$parent->name}" : "Create $type",
+        url   => request->uri,
         messages,
         entries($args->{validate}),
     };
@@ -156,12 +159,78 @@ sub handle_edit($) {
         }
     }
 
+    content_type('text/html');
     template 'form.tt' => {
         title => sprintf($args->{title}, $obj->name),
+        url   => request->uri,
         messages,
         entries($args->{validate}, $obj),
     };
 }
+
+
+my $add_company = sub {
+    handle_add {
+        type     => 'Company',
+        validate => [[name => 'Str']],
+    }
+};
+
+my $edit_company = sub {
+    handle_edit {
+        title    => 'Edit Company %s',
+        type     => 'Company',
+        validate => [[name => 'Str']],
+    }
+};
+
+my $add_department = sub {
+    handle_add {
+        type     => 'Department',
+        list     => 'departments',
+        validate => [[name => 'Str']],
+    }
+};
+
+my $edit_department = sub {
+    handle_edit {
+        title    => 'Edit Department %s',
+        type     => 'Department',
+        validate => [[name => 'Str']],
+    }
+};
+
+my $add_employee = sub {
+    handle_add {
+        type     => 'Employee',
+        list     => 'employees',
+        validate => [[name => 'Str'], [address => 'Str'], [salary => 'UnsignedNum']],
+    }
+};
+
+my $edit_employee = sub {
+    handle_edit {
+        title    => 'Edit Employee %s',
+        type     => 'Employee',
+        validate => [[name => 'Str'], [address => 'Str'], [salary => 'UnsignedNum']],
+    }
+};
+
+my $edit_address = sub {
+    handle_edit {
+        title    => 'Edit Address of Employee %s',
+        type     => 'Employee',
+        validate => [[address => 'Str']],
+    }
+};
+
+my $edit_salary = sub {
+    handle_edit {
+        title    => 'Edit Salary of Employee %s',
+        type     => 'Employee',
+        validate => [[salary => 'UnsignedNum']],
+    }
+};
 
 
 get '/' => sub {
@@ -172,68 +241,22 @@ get '/' => sub {
     };
 };
 
-any ['get', 'post'] => '/add' => sub {
-    return handle_add {
-        type     => 'Company',
-        validate => [[name => 'Str']],
-    };
-};
-
-any ['get', 'post'] => '/edit/company/:uuid' => sub {
-    return handle_edit {
-        title    => 'Edit Company %s',
-        type     => 'Company',
-        validate => [[name => 'Str']],
-    };
-};
-
-any ['get', 'post'] => '/add/department/:uuid' => sub {
-    return handle_add {
-        type     => 'Department',
-        list     => 'departments',
-        validate => [[name => 'Str']],
-    };
-};
-
-any ['get', 'post'] => '/edit/department/:uuid' => sub {
-    return handle_edit {
-        title    => 'Edit Department %s',
-        type     => 'Department',
-        validate => [[name => 'Str']],
-    };
-};
-
-any ['get', 'post'] => '/add/employee/:uuid' => sub {
-    return handle_add {
-        type     => 'Employee',
-        list     => 'employees',
-        validate => [[name => 'Str'], [address => 'Str'], [salary => 'UnsignedNum']],
-    };
-};
-
-any ['get', 'post'] => '/edit/employee/:uuid' => sub {
-    return handle_edit {
-        title    => 'Edit Employee %s',
-        type     => 'Employee',
-        validate => [[name => 'Str'], [address => 'Str'], [salary => 'UnsignedNum']],
-    };
-};
-
-any ['get', 'post'] => '/edit/address/:uuid' => sub {
-    return handle_edit {
-        title    => 'Edit Address of Employee %s',
-        type     => 'Employee',
-        validate => [[address => 'Str']],
-    };
-};
-
-any ['get', 'post'] => '/edit/salary/:uuid' => sub {
-    return handle_edit {
-        title    => 'Edit Salary of Employee %s',
-        type     => 'Employee',
-        validate => [[salary => 'UnsignedNum']],
-    };
-};
+ajax                   '/add'                   => $add_company;
+any ['get', 'post'] => '/add'                   => $add_company;
+ajax                   '/edit/company/:uuid'    => $edit_company;
+any ['get', 'post'] => '/edit/company/:uuid'    => $edit_company;
+ajax                   '/add/department/:uuid'  => $add_department;
+any ['get', 'post'] => '/add/department/:uuid'  => $add_department;
+ajax                   '/edit/department/:uuid' => $edit_department;
+any ['get', 'post'] => '/edit/department/:uuid' => $edit_department;
+ajax                   '/add/employee/:uuid'    => $add_employee;
+any ['get', 'post'] => '/add/employee/:uuid'    => $add_employee;
+ajax                   '/edit/employee/:uuid'   => $edit_employee;
+any ['get', 'post'] => '/edit/employee/:uuid'   => $edit_employee;
+ajax                   '/edit/address/:uuid'    => $edit_address;
+any ['get', 'post'] => '/edit/address/:uuid'    => $edit_address;
+ajax                   '/edit/salary/:uuid'     => $edit_salary;
+any ['get', 'post'] => '/edit/salary/:uuid'     => $edit_salary;
 
 any ['get', 'post'] => '/delete/:uuid' => sub {
     my $uuid = param('uuid');
@@ -246,10 +269,11 @@ any ['get', 'post'] => '/delete/:uuid' => sub {
     }
 
     if (request->method eq 'POST') {
+        my $callback = sub { delete $uuids->{$_[1]->uuid} };
         $obj->visit(C101::Visitor->new({
-            begin_company    => sub { delete $uuids->{$_[1]->uuid} },
-            begin_department => sub { delete $uuids->{$_[1]->uuid} },
-            begin_employee   => sub { delete $uuids->{$_[1]->uuid} },
+            begin_company    => $callback,
+            begin_department => $callback,
+            begin_employee   => $callback,
         }));
         remove(sub { $_[0] == $obj }, $companies);
         return redirect '/';

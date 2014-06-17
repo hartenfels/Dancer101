@@ -1,5 +1,5 @@
 <% USE HTML %>
-<form method="post">
+<form method="post" title="<% HTML.escape(title) %>" tourl="<% url %>">
 
     <% FOREACH e IN entries %>
     <div id="entry-<% e.name %>" class="form-entry">

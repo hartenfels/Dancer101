@@ -7,6 +7,11 @@ h1 {
 }
 
 
+input[type="text"] {
+    width: 100%;
+}
+
+
 .addr-item {
     list-style-image: url('/addr_icon.png');
 }
