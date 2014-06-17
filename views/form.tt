@@ -8,7 +8,9 @@
     </div>
     <% END %>
 
-    <input type="submit" value="Submit">
-    <a href="/">Cancel</a>
+    <div class="actions">
+        <input type="submit" value="Submit">
+        <a href="/">Cancel</a>
+    </div>
 </form>
 

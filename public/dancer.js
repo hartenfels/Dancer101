@@ -120,15 +120,15 @@ addEmployee: function(node) {
 
 
 ajax: function(data) {
-    var dom = $(data);
-    dom.submit(dancer.submit)
-       .dialog({close: function() {
-            $(this).remove();
-        }})
-       .find('a').click(function() {
-            dom.dialog('close');
-            return false;
-        });
+    $(data).submit(dancer.submit)
+           .dialog({
+                buttons: {
+                    Submit: function() { $(this).submit();        },
+                    Cancel: function() { $(this).dialog('close'); },
+                },
+                close: function() { $(this).remove(); },
+            })
+           .find('.actions').hide();
 },
 
 
