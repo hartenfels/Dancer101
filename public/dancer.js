@@ -19,29 +19,32 @@ var getTypeFromId = function(id) {
 var getUuidFromId = function(id) { return id.substring(id.indexOf('-') + 1); };
 
 
-var done = function(data, ok) {
-    console.log('done');
-    console.debug(data);
-};
-
+var update = function(node, data) {
+    console.log(data);
+}; 
 
 var submit = function(e) {
     var node = $(e.target);
-    $.post(node.attr('tourl'), node.serialize());
+    $.post(node.attr('tourl'), node.serialize(),
+           function(data) { update(node, data); }, 'json');
     return false;
 };
 
 
 var ajax = function(data) {
-    $(data).submit(submit)
-           .dialog({
-                buttons: {
-                    Submit: function() { $(this).submit();        },
-                    Cancel: function() { $(this).dialog('close'); },
-                },
-                close: function() { $(this).remove(); },
-            })
-           .find('.actions').hide();
+    var dom = $(data);
+    var sub = dom.find('[name="submit"]').hide();
+    var can = dom.find('[name="cancel"]').hide();
+
+    var but = {};
+    but[sub.attr('value')] = function() { $(this).submit();        };
+    but[can.text()       ] = function() { $(this).dialog('close'); };
+
+    dom.submit(submit)
+       .dialog({
+            buttons: but,
+            close  : function() { $(this).remove(); },
+        });
 };
 
 
@@ -51,24 +54,7 @@ var edit = function(node) {
 
 
 var remove = function(node) {
-    var name = node.text.trim();
-    $('<div></div>').text('Really delete ' + name + '?').dialog({
-        title  : 'Delete ' + name,
-
-        buttons: {
-            Yes: function() {
-                $.post('/delete/' + getUuidFromId(node.id),
-                       {}, done, 'json');
-                $(this).dialog('close');
-            },
-
-            No : function() {
-                $(this).dialog('close');
-            },
-        },
-
-        close  : function() { $(this).remove(); },
-    });
+    $.get('/delete/' + getUuidFromId(node.id), {}, ajax, 'html');
 };
 
 

@@ -17,7 +17,7 @@ set(
 );
 
 
-my $server = C101::Server->new();
+my $server = C101::Server->new;
 
 my $index = sub {
     $server->handle_index;
@@ -47,7 +47,7 @@ my $add_department = sub {
 };
 
 my $edit_department = sub {
-    server->handle_edit({
+    $server->handle_edit({
         title    => 'Edit Department %s',
         type     => 'Department',
         validate => [[name => 'Str']],
@@ -55,7 +55,7 @@ my $edit_department = sub {
 };
 
 my $add_employee = sub {
-    server->handle_add({
+    $server->handle_add({
         type     => 'Employee',
         list     => 'employees',
         validate => [[name => 'Str'], [address => 'Str'], [salary => 'UnsignedNum']],
@@ -63,7 +63,7 @@ my $add_employee = sub {
 };
 
 my $edit_employee = sub {
-    server->handle_edit({
+    $server->handle_edit({
         title    => 'Edit Employee %s',
         type     => 'Employee',
         validate => [[name => 'Str'], [address => 'Str'], [salary => 'UnsignedNum']],
@@ -71,7 +71,7 @@ my $edit_employee = sub {
 };
 
 my $edit_address = sub {
-    server->handle_edit({
+    $server->handle_edit({
         title    => 'Edit Address of Employee %s',
         type     => 'Employee',
         validate => [[address => 'Str']],
@@ -79,7 +79,7 @@ my $edit_address = sub {
 };
 
 my $edit_salary = sub {
-    server->handle_edit({
+    $server->handle_edit({
         title    => 'Edit Salary of Employee %s',
         type     => 'Employee',
         validate => [[salary => 'UnsignedNum']],
@@ -108,11 +108,15 @@ ajax                   '/edit/address/:uuid'    => $edit_address;
 any ['get', 'post'] => '/edit/address/:uuid'    => $edit_address;
 ajax                   '/edit/salary/:uuid'     => $edit_salary;
 any ['get', 'post'] => '/edit/salary/:uuid'     => $edit_salary;
+ajax                   '/delete/:uuid'          => $delete;
 any ['get', 'post'] => '/delete/:uuid'          => $delete;
 
 
 # Exit gracefully so that all destructors will be called.
-$SIG{INT} = sub { exit };
+$SIG{INT} = sub {
+    $server->save;
+    exit;
+};
 
 
 dance;

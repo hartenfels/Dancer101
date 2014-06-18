@@ -6,7 +6,7 @@ use Moose;
 use Scalar::Util      qw(looks_like_number);
 use Template;
 use C101::Operations  qw(remove uuids);
-use C101::Persistence qw(serialize unserialize);
+use C101::Persistence qw(serialize unserialize unparse);
 use C101::Sample;
 
 
@@ -29,10 +29,9 @@ sub BUILD {
     $self->_uuids(uuids(@{$self->companies}));
 }
 
-sub DEMOLISH {
+sub save {
     serialize(shift->companies, 'companies.bin');
 }
-
 
 sub _uuid {
     my ($self, $key, $value) = @_;
@@ -106,6 +105,31 @@ sub _validate {
     return $result;
 }
 
+
+sub _success {
+    if (request->is_ajax) {
+        content_type('application/json');
+        unparse({companies => shift->companies, _messages});
+    } else {
+        redirect '/';
+    }
+}
+
+sub _failure {
+    if (request->is_ajax) {
+        content_type('text/html');
+        ...
+    } else {
+        redirect '/';
+    }
+}
+
+sub _ajax_failure {
+    content_type('application/json');
+    ...
+}
+
+
 sub handle_index {
     template 'index.tt' => {
         title     => 'Contribution:Dancer',
@@ -125,7 +149,7 @@ sub handle_add {
     if ($list && !$parent) {
         _set_message("The UUID $uuid does not correspond to anything. "
                    . 'Either you accessed a broken link or the object was modified.');
-        return redirect '/';
+        return $self->_failure;
     }
 
     if (request->method eq 'POST') {
@@ -138,9 +162,10 @@ sub handle_add {
             } else {
                 push(($list ? $parent->$list : $self->companies), $obj);
                 $self->_uuid($obj->uuid => $obj);
-                return redirect '/';
+                return $self->_success;
             }
         }
+        return $self->_ajax_failure if request->is_ajax;
     }
 
     content_type('text/html');
@@ -162,11 +187,11 @@ sub handle_edit {
     if (!$obj || !$obj->isa("C101::$type")) {
         _set_message("The UUID $uuid does not correspond to any $type. "
                   . 'Either you accessed a broken link or the object was modified.');
-        return redirect '/';
+        return $self->_failure;
     }
 
     if (request->method eq 'POST') {
-        my $valid = validate($args->{validate});
+        my $valid = _validate($args->{validate});
         if (defined $valid) {
             my $old = {};
             eval {
@@ -184,9 +209,10 @@ sub handle_edit {
                 }
             } else {
                 $self->_renew_uuid($obj);
-                return redirect '/';
+                return $self->_success;
             }
         }
+        return $self->_ajax_failure if request->is_ajax;
     }
 
     content_type('text/html');
@@ -206,7 +232,7 @@ sub handle_delete {
     if (!$obj) {
         _set_message("The UUID $uuid does not correspond to anything. "
                   . 'Either you accessed a broken link or the object was modified.');
-        return redirect '/';
+        return $self->_failure;
     }
 
     if (request->method eq 'POST') {
@@ -217,12 +243,14 @@ sub handle_delete {
             begin_employee   => $callback,
         }));
         remove(sub { $_[0] == $obj }, $self->companies);
-        return redirect '/';
+        return $self->_success;
     }
 
+    content_type('text/html');
     template 'delete.tt' => {
         title  => "Deletion of ${\$obj->name}",
         object => $obj,
+        url    => request->uri,
         _messages,
     };
 };
