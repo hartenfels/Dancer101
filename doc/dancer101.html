@@ -19,6 +19,15 @@
 	<li><a href="#contribution_dancer">Contribution:Dancer</a></li>
 	<ul>
 
+		<li><a href="#objects">Objects</a></li>
+		<li><a href="#c101__model">C101::Model</a></li>
+		<ul>
+
+			<li><a href="#classes">Classes</a></li>
+			<li><a href="#method_c101__model__renew_uuid">method C101::Model::renew_uuid</a></li>
+			<li><a href="#method_c101__model__visit_c101__visitor__visitor___parent___index_">method C101::Model::visit(C101::Visitor $visitor, $parent?, $index?)</a></li>
+		</ul>
+
 		<li><a href="#c101__operations">C101::Operations</a></li>
 		<ul>
 
@@ -38,6 +47,12 @@
 
 		<li><a href="#c101__sample">C101::Sample</a></li>
 		<li><a href="#c101__visitor">C101::Visitor</a></li>
+		<ul>
+
+			<li><a href="#regular_visits">Regular Visits</a></li>
+			<li><a href="#advanced_visits">Advanced Visits</a></li>
+		</ul>
+
 	</ul>
 
 </ul>
@@ -50,6 +65,51 @@
 </p>
 <h1><a name="contribution_dancer">Contribution:Dancer</a></h1>
 <p>This documentation describes each of the Perl Module (<code>.pm</code>) files.</p>
+<p>
+</p>
+<h2><a name="objects">Objects</a></h2>
+<p>This contribution uses <em>Moops</em> for its object
+models. Accessors are automatically provided for all properties and they all work the
+same, so they won't be documented explictly for every property.</p>
+<p>The accessors are methods with the same name as the property. For example, to get the
+<code>name</code> property from some object <code>obj</code>, you would write
+<code>my $name = $obj-&gt;name</code>. To set a name, just pass the new name as the parameter:
+<code>$obj-&gt;name($new_name)</code>.</p>
+<p>
+</p>
+<h2><a name="c101__model">C101::Model</a></h2>
+<p>The object model for 101Companies. Contains classes for Companies, Departments and
+Employees, which are all extensions of the Model class.</p>
+<p>Each model object has a name and a UUID, the latter of which will be generated
+automatically and can be renewed with <a href="#method_c101__model__renew_uuid">renew_uuid</a>.</p>
+<p>There is also the two roles <em>Departments</em> and <em>Employees</em>, which give a model class
+a list of Departments or Employees respectively.</p>
+<p>
+</p>
+<h3><a name="classes">Classes</a></h3>
+<dl>
+<dt><strong><a name="company_extends_model_with_departments" class="item"><em>Company</em> extends Model with Departments</a></strong></dt>
+
+<dt><strong><a name="department_extends_model_with_departments_employees" class="item"><em>Department</em> extends Model with Departments, Employees</a></strong></dt>
+
+<dt><strong><a name="employee_extends_model" class="item"><em>Employee</em> extends Model</a></strong></dt>
+
+</dl>
+<p>
+</p>
+<h3><a name="method_c101__model__renew_uuid">method C101::Model::renew_uuid</a></h3>
+<p>Gives the object a newly generated UUID. The old UUID is returned.</p>
+<p>
+</p>
+<h3><a name="method_c101__model__visit_c101__visitor__visitor___parent___index_">method C101::Model::visit(C101::Visitor $visitor, $parent?, $index?)</a></h3>
+<p>Hosts a visit for the given $visitor. This will call the visitor's appropriate <em>begin</em>
+callback, then visit all its Employees and then Departments (if the object implements
+those respective roles) and finally call the visitor's appropriate <em>end</em> callback.</p>
+<p>When visiting Employees or Departments, the list that is being iterated through and a
+reference to the iteration index will be passed as $parent and $index respectively. When
+calling this method from somewhere else, make sure to pass such a list and index
+reference if your visitor needs it.</p>
+<p>See also <a href="#c101__visitor">C101::Visitor</a>.</p>
 <p>
 </p>
 <h2><a name="c101__operations">C101::Operations</a></h2>
@@ -106,19 +166,22 @@ company, only the UUIDs will differ.</p>
 <p>The class provides the following six callbacks that are called when the traversal enters
 or exits the given type ($self being the visitor itself):</p>
 <dl>
-<dt><strong><a name="begin_company" class="item"><code>begin_company($self, $company)</code></a></strong></dt>
+<dt><strong><a name="begin_company" class="item"><code>begin_company($self, $company, $parent?, $index?)</code></a></strong></dt>
 
-<dt><strong><a name="begin_department" class="item"><code>begin_department($self, $department)</code></a></strong></dt>
+<dt><strong><a name="begin_department" class="item"><code>begin_department($self, $department, $parent?, $index?)</code></a></strong></dt>
 
-<dt><strong><a name="begin_employee" class="item"><code>begin_employee($self, $employee)</code></a></strong></dt>
+<dt><strong><a name="begin_employee" class="item"><code>begin_employee($self, $employee, $parent?, $index?)</code></a></strong></dt>
 
-<dt><strong><a name="end_employee" class="item"><code>end_employee($self, $employee)</code></a></strong></dt>
+<dt><strong><a name="end_employee" class="item"><code>end_employee($self, $employee, $parent?, $index?)</code></a></strong></dt>
 
-<dt><strong><a name="end_department" class="item"><code>end_department($self, $department)</code></a></strong></dt>
+<dt><strong><a name="end_department" class="item"><code>end_department($self, $department, $parent?, $index?)</code></a></strong></dt>
 
-<dt><strong><a name="end_company" class="item"><code>end_company($self, $company)</code></a></strong></dt>
+<dt><strong><a name="end_company" class="item"><code>end_company($self, $company, $parent?, $index?)</code></a></strong></dt>
 
 </dl>
+<p>
+</p>
+<h3><a name="regular_visits">Regular Visits</a></h3>
 <p>To actually visit something, fill the callbacks you need with appropriate subs and call a
 Company's, Department's or Employee's <code>visit</code> function. For example, a visitor to print
 the structure of an object tree <code>$obj</code>:</p>
@@ -147,6 +210,28 @@ the structure of an object tree <code>$obj</code>:</p>
         },
         end_company =&gt; sub {
             --$depth;
+        },
+    });
+    $obj-&gt;visit($visitor);</pre>
+<p>
+</p>
+<h3><a name="advanced_visits">Advanced Visits</a></h3>
+<p>More complicated structural operations like additions or deletions are still possible
+with visitors, but they require a bit more reflection. So in the callbacks, $parent is a
+reference to the list that is currently being iterated through and of which the current
+element is a part of and $index is a reference to the iteration index. At top level, you
+may not be iterating through a list at all (e.g. because you're only visiting a single
+company), which is why those parameters are optional.</p>
+<p>You need to make sure that when modifying the parent list, you probably also need to
+modify the iteration $index. For example, when you want to fire every employee with a
+salary over 9999.99 as part of a 99% ralley, you need to decrement the index every time
+that happens. Otherwise the index would be incremented normally on the next iteration and
+you'd potentially skip over a part of the 1%.</p>
+<pre>
+    my $visitor = C101::Visitor-&gt;new({
+        begin_employee =&gt; sub {
+            my ($self, $employee, $parent, $index) = @_;
+            delete $parent-&gt;[$$index--] if $employee-&gt;salary &gt; 9999.99;
         },
     });
     $obj-&gt;visit($visitor);</pre>

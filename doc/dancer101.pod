@@ -2,5 +2,16 @@
 
 This documentation describes each of the Perl Module (C<.pm>) files.
 
+=head2 Objects
+
+This contribution uses L<Moops|http://search.cpan.org/~tobyink/Moops> for its object
+models. Accessors are automatically provided for all properties and they all work the
+same, so they won't be documented explictly for every property.
+
+The accessors are methods with the same name as the property. For example, to get the
+C<name> property from some object C<obj>, you would write
+C<my $name = $obj-E<gt>name>. To set a name, just pass the new name as the parameter:
+C<$obj-E<gt>name($new_name)>.
+
 =cut
 
