@@ -5,10 +5,6 @@ use Data::Structure::Util qw(unbless);
 use Exporter;
 use JSON::XS;
 use Storable              qw(store retrieve dclone);
-use C101::Company;
-use C101::Department;
-use C101::Employee;
-use C101::Visitor;
 
 use vars qw(@ISA @EXPORT_OK);
 @ISA       = ('Exporter');

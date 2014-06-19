@@ -14,7 +14,7 @@ like [cpan](http://search.cpan.org/dist/CPAN/lib/CPAN.pm) or
 
 To install the packages with said installer, just run its command _as root_ with the
 packages as parameters:
-`cpan Dancer Data::Structure::Util Data::UUID File::Slurp JSON::XS Moose` (or replace
+`cpan Dancer Data::Structure::Util Data::UUID File::Slurp JSON::XS Moops` (or replace
 `cpan` with whatever the command for your installer is called).
 
 # Testing

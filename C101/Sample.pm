@@ -1,9 +1,7 @@
 package C101::Sample;
 use strict;
 use warnings;
-use C101::Company;
-use C101::Department;
-use C101::Employee;
+use C101::Model;
 
 sub create {
     C101::Company->new({
