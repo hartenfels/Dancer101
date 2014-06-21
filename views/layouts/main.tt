@@ -27,15 +27,19 @@
     </head>
 
     <body>
-        <h1><% HTML.escape(title) %></h1>
-        <% IF messages.size %>
-        <ul>
-            <% FOREACH m IN messages %>
-            <li><% HTML.escape(m) %></li>
-            <% END %>
-        </ul>
+        <div id="messages">
+        <% FOREACH m IN messages %>
+            <div class="message<% IF m.is_error %> error<% END %>">
+                <% HTML.escape(m.text) %>
+            </div>
         <% END %>
-        <% content %>
+        </div>
+
+        <h1><% HTML.escape(title) %></h1>
+
+        <div id="content">
+           <% content %>
+        </div>
     </body>
 
 </html>

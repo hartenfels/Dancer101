@@ -19,20 +19,21 @@ var getTypeFromId = function(id) {
 var getUuidFromId = function(id) { return id.substring(id.indexOf('-') + 1); };
 
 
-var update = function(node, data) {
-    console.log(data);
-}; 
+var showMessage = function(div) {
+    div.slideDown()
+       .delay(5000)
+       .slideUp({complete: function() { div.remove(); } });
+}
 
-var submit = function(e) {
-    var node = $(e.target);
-    $.post(node.attr('tourl'), node.serialize(),
-           function(data) { update(node, data); }, 'json');
-    return false;
-};
+var addMessage = function(msg) {
+    var div = $('<div class="message"></div>').text(msg.text).hide();
+    if (+msg.is_error) div.addClass('error');
+    $('#messages').append(div);
+    showMessage(div);
+}
 
 
-var ajax = function(data) {
-    var dom = $(data);
+var showDialog = function(dom) {
     var sub = dom.find('[name="submit"]').hide();
     var can = dom.find('[name="cancel"]').hide();
 
@@ -40,36 +41,141 @@ var ajax = function(data) {
     but[sub.attr('value')] = function() { $(this).submit();        };
     but[can.text()       ] = function() { $(this).dialog('close'); };
 
-    dom.submit(submit)
+    dom.submit(function(e) {
+            var node = $(e.target);
+            $.post(node.attr('tourl'), node.serialize(), ajax, 'json');
+            dom.dialog('close');
+            return false;
+        })
        .dialog({
             buttons: but,
             close  : function() { $(this).remove(); },
         });
+}
+
+
+var rebuild = function(obj, closed) {
+
+    var rebuildEmpls = function(employees) {
+        var nodes = [];
+        for (var i = 0; i < employees.length; ++i) {
+            var empl = employees[i];
+            var uuid = 'employee-' + empl.uuid;
+            nodes.push({
+                id      : uuid,
+                text    : empl.name,
+                icon    : '/empl_icon.png',
+                state   : {opened: !closed[uuid]},
+                li_attr : {class: 'empl-item'},
+                children: [
+                    {
+                        id      : 'address-' + empl.uuid,
+                        text    : empl.address,
+                        icon    : '/addr_icon.png',
+                        li_attr : {class: 'addr-item'},
+                    }, {
+                        id      : 'salary-' + empl.uuid,
+                        text    : empl.salary.toString(),
+                        icon    : '/slry_icon.png',
+                        li_attr : {class: 'slry-item'},
+                    },
+                ],
+            });
+        }
+        return nodes;
+    }
+
+    var rebuildDepts = function(departments) {
+        var nodes = [];
+        for (var i = 0; i < departments.length; ++i) {
+            var dept = departments[i];
+            var uuid = 'department-' + dept.uuid;
+            nodes.push({
+                id      : uuid,
+                text    : dept.name,
+                icon    : '/dept_icon.png',
+                state   : {opened: !closed[uuid]},
+                li_attr : {class: 'dept-item'},
+                children: rebuildEmpls(dept.employees).concat(
+                                                       rebuildDepts(dept.departments)),
+            });
+        }
+        return nodes;
+    }
+
+    var rebuildCompanies = function(companies) {
+        var nodes = [];
+        for (var i = 0; i < companies.length; ++i) {
+            var comp = companies[i];
+            var uuid = 'company-' + comp.uuid;
+            nodes.push({
+                id      : uuid,
+                text    : comp.name,
+                icon    : '/comp_icon.png',
+                state   : {opened: !closed[uuid]},
+                li_attr : {class: 'comp-item'},
+                children: rebuildDepts(comp.departments),
+            });
+        }
+        return nodes;
+    }
+
+    return rebuildCompanies(obj);
+}
+
+
+var gatherClosed = function(nodes) {
+    var closed = {};
+
+    var recursiveGather = function(node) {
+        closed[node.id] = !node.state.opened;
+        for (var j = 0; j < node.children.length; ++j)
+            recursiveGather(node.children[j]);
+    }
+
+    for (var i = 0; i < nodes.length; ++i)
+        recursiveGather(nodes[i]);
+    return closed;
+}
+
+
+var ajax = function(data) {
+    for (var i = 0; i < data.messages.length; ++i)
+        addMessage(data.messages[i]);
+
+    switch (data.type) {
+    case 'get':
+        showDialog($(data.html));
+        break;
+    case 'success':
+        var tree   = $('#company-tree');
+        var closed = gatherClosed(tree.jstree('get_json'));
+        tree.jstree('destroy').empty().jstree({
+            core       : {data : rebuild(data.companies, closed)},
+            contextmenu: {items: getContextMenu},
+            plugins    : ['wholerow', 'contextmenu'],
+        });
+        break;
+    case 'failure':
+        break;
+    default:
+        throw 'Unknown AJAX response type: ' + data.type;
+    }
 };
 
 
-var edit = function(node) {
-    $.get('/edit/' + node.id.replace('-', '/'), {}, ajax, 'html');
+var edit = function(n) { $.get('/edit/' + n.id.replace('-', '/'), {}, ajax, 'json'); };
+
+var remove = function(n) { $.get('/delete/' + getUuidFromId(n.id), {}, ajax, 'json'); };
+
+var addCompany = function() { $.get('/add', {}, ajax, 'json'); };
+
+var addDepartment = function(n) {
+    $.get('/add/department/' + getUuidFromId(n.id), {}, ajax, 'json');
 };
 
-
-var remove = function(node) {
-    $.get('/delete/' + getUuidFromId(node.id), {}, ajax, 'html');
-};
-
-
-var addCompany = function() {
-    $.get('/add', {}, ajax, 'html');
-};
-
-
-var addDepartment = function(node) {
-    $.get('/add/department/' + getUuidFromId(node.id), {}, ajax, 'html');
-};
-
-
-var addEmployee = function(node) {
-    $.get('/add/employee/' + getUuidFromId(node.id), {}, ajax, 'html');
+var addEmployee = function(n) {
+    $.get('/add/employee/' + getUuidFromId(n.id), {}, ajax, 'json');
 };
 
 
@@ -127,9 +233,12 @@ return function() {
     $('.addr-item').attr('data-jstree', '{"icon":"/addr_icon.png"}');
     $('.slry-item').attr('data-jstree', '{"icon":"/slry_icon.png"}');
 
+    $('#messages').css('position', 'absolute');
+    showMessage($('.message').hide());
+
     $('#company-tree').jstree({
-        plugins    : ['wholerow', 'contextmenu'],
         contextmenu: {'items': getContextMenu},
+        plugins    : ['wholerow', 'contextmenu'],
     });
 };
 

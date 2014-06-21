@@ -12,6 +12,37 @@ input[type="text"] {
 }
 
 
+#content {
+    position: relative;
+    z-index : 0;
+}
+
+#messages {
+    top           : 1%;
+    left          : 4.2%;
+    width         : 90%;
+    pointer-events: none;
+}
+
+.message {
+    position        : relative;
+    background-color: rgba(150, 220, 255, 0.85);
+    border          : 1px solid rgba(0, 0, 0, 0.25);
+    border-radius   : 5px;
+    color           : #222;
+    font-weight     : bold;
+    margin-bottom   : 5px;
+    padding         : 5px;
+    width           : 100%;
+    z-index         : 1;
+}
+
+.error {
+    background-color: rgba(255, 180, 180, 0.85);
+    border          : 1px solid rgba(0, 0, 0, 0.25);
+}
+
+
 .addr-item {
     list-style-image: url('/addr_icon.png');
 }

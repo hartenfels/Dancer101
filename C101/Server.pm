@@ -4,11 +4,13 @@ use Moops;
 
 class Server {
     use Dancer;
-    use Data::Dumper;
-    use Scalar::Util      qw(looks_like_number);
+    use Data::Structure::Util qw(unbless);
+    use JSON::XS              qw(encode_json);
+    use Scalar::Util          qw(looks_like_number);
+    use Storable              qw(dclone);
     use Template;
-    use C101::Operations  qw(remove uuids);
-    use C101::Persistence qw(serialize unserialize unparse);
+    use C101::Operations      qw(remove uuids);
+    use C101::Persistence     qw(serialize unserialize unparse);
     use C101::Sample;
 
     has 'companies' => (
@@ -39,16 +41,32 @@ class Server {
         }
     }
 
-    method _renew_uuid(C101::Model $obj) {
-        $self->_uuid($obj->renew_uuid, 0);
-        $self->_uuid($obj->uuid, $obj);
+
+    method _jsonify(%thing) {
+        content_type('application/json');
+        encode_json(\%thing);
     }
 
+    method _get($file, @args) {
+        if (request->is_ajax) {
+            $self->_jsonify(
+                messages => _messages(),
+                type     => 'get',
+                html     => template($file => {@args}),
+            );
+        } else {
+            content_type('text/html');
+            template $file => {@args, messages => _messages()};
+        }
+    }
 
     method _success {
         if (request->is_ajax) {
-            content_type('application/json');
-            unparse({companies => $self->companies, _messages()});
+            $self->_jsonify(
+                messages  => _messages(),
+                type      => 'success',
+                companies => unbless(dclone($self->companies)),
+            );
         } else {
             redirect '/';
         }
@@ -56,25 +74,21 @@ class Server {
 
     method _failure {
         if (request->is_ajax) {
-            content_type('text/html');
-            ...
+            $self->_jsonify(
+                messages => _messages(),
+                type     => 'failure',
+            );
         } else {
             redirect '/';
         }
     }
 
-    method _ajax_failure {
-        content_type('application/json');
-        ...
-    }
-
 
     method handle_index {
-        template 'index.tt' => {
+        return $self->_get('index.tt',
             title     => 'Contribution:Dancer',
             companies => $self->companies,
-            _messages(),
-        };
+        );
     };
 
     method handle_add(HashRef $args) {
@@ -84,8 +98,8 @@ class Server {
         my $parent = $uuid ? $self->_uuid($uuid) : undef;
 
         if ($list && !$parent) {
-            _set_message("The UUID $uuid does not correspond to anything. "
-                       . 'Either you accessed a broken link or the object was modified.');
+            _set_error("The UUID $uuid does not correspond to anything. Either you "
+                     . 'accessed a broken link or the object was modified.');
             return $self->_failure;
         }
 
@@ -95,23 +109,21 @@ class Server {
                 my $obj = eval { "C101::$type"->new($valid) };
                 if ($@) {
                     $@ =~ /^([^\n]*)/;
-                    _set_message("Error: $1");
+                    _set_error("Error: $1");
                 } else {
                     push(($list ? $parent->$list : $self->companies), $obj);
                     $self->_uuid($obj->uuid => $obj);
+                    _set_message("Created $type ${\$obj->name}.");
                     return $self->_success;
                 }
             }
-            return $self->_ajax_failure if request->is_ajax;
         }
 
-        content_type('text/html');
-        return template 'form.tt' => {
+        return $self->_get('form.tt',
             title => $list ? "Add $type to ${\$parent->name}" : "Create $type",
             url   => request->uri,
-            _messages(),
             _entries($args->{validate}),
-        };
+        );
     }
 
     method handle_edit(HashRef $args) {
@@ -120,7 +132,7 @@ class Server {
         my $obj  = $uuid ? $self->_uuid($uuid) : undef;
 
         if (!$obj || !$obj->isa("C101::$type")) {
-            _set_message("The UUID $uuid does not correspond to any $type. "
+            _set_error("The UUID $uuid does not correspond to any $type. "
                       . 'Either you accessed a broken link or the object was modified.');
             return $self->_failure;
         }
@@ -137,26 +149,23 @@ class Server {
                 };
                 if ($@) {
                     $@ =~ /^([^\n]*)/;
-                    _set_message("Error: $1");
+                    _set_error("Error: $1");
                     # attempt to restore old values
                     while (my ($k, $v)) {
                         eval { $obj->$k($old->{$k}) if $old->{$k} };
                     }
                 } else {
-                    $self->_renew_uuid($obj);
+                    _set_message("Modified $type ${\$obj->name}.");
                     return $self->_success;
                 }
             }
-            return $self->_ajax_failure if request->is_ajax;
         }
 
-        content_type('text/html');
-        template 'form.tt' => {
+        return $self->_get('form.tt',
             title => sprintf($args->{title}, $obj->name),
             url   => request->uri,
-            _messages(),
             _entries($args->{validate}, $obj),
-        };
+        );
     }
 
     method handle_delete {
@@ -164,7 +173,7 @@ class Server {
         my $obj  = $uuid ? $self->_uuid($uuid) : undef;
 
         if (!$obj) {
-            _set_message("The UUID $uuid does not correspond to anything. "
+            _set_error("The UUID $uuid does not correspond to anything. "
                       . 'Either you accessed a broken link or the object was modified.');
             return $self->_failure;
         }
@@ -177,16 +186,15 @@ class Server {
                 begin_employee   => $callback,
             }));
             remove(sub { $_[0] == $obj }, $self->companies);
+            _set_message("Deleted ${\$obj->name}.");
             return $self->_success;
         }
 
-        content_type('text/html');
-        template 'delete.tt' => {
+        return $self->_get('delete.tt',
             title  => "Deletion of ${\$obj->name}",
             object => $obj,
             url    => request->uri,
-            _messages(),
-        };
+        );
     }
 
 
@@ -206,12 +214,17 @@ class Server {
     fun _messages() {
         my $messages = session('messages');
         session(messages => []);
-        return messages => $messages;
+        return $messages;
     }
 
-    fun _set_message(@messages) {
+    fun _set_message(Str $message) {
         session(messages => []) if not defined session('messages');
-        push(session('messages'), $_) for @messages;
+        push(session('messages'), {text => $message, is_error => 0});
+    }
+
+    fun _set_error(Str $message) {
+        session(messages => []) if not defined session('messages');
+        push(session('messages'), {text => $message, is_error => 1});
     }
 
     fun _validate(ArrayRef[Tuple[Str, Str]] $list) {
@@ -224,7 +237,7 @@ class Server {
                     if ($value =~ /^\s*(.+?)\s*$/) {
                         $result->{$key} = $1 if defined $result;
                     } else {
-                        _set_message("Please enter a non-empty $key.");
+                        _set_error("Please enter a non-empty $key.");
                         $result = undef;
                     }
                 }
@@ -232,7 +245,7 @@ class Server {
                     if (looks_like_number($value) && $value >= 0) {
                         $result->{$key} = $value + 0 if defined $result;
                     } else {
-                        _set_message("Please enter a non-negative number for $key.");
+                        _set_error("Please enter a non-negative number for $key.");
                         $result = undef;
                     }
                 }
