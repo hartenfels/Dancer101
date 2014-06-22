@@ -50,11 +50,13 @@ var showDialog = function(dom) {
        .dialog({
             buttons: but,
             close  : function() { $(this).remove(); },
+            show   : {effect: 'drop', direction: 'down'},
+            hide   : {effect: 'drop', direction: 'up'  },
         });
 }
 
 
-var rebuild = function(obj, closed) {
+var rebuild = function(obj, info) {
 
     var rebuildEmpls = function(employees) {
         var nodes = [];
@@ -65,18 +67,20 @@ var rebuild = function(obj, closed) {
                 id      : uuid,
                 text    : empl.name,
                 icon    : '/empl_icon.png',
-                state   : {opened: !closed[uuid]},
+                state   : {opened: !info[uuid], selected: info.selected == uuid},
                 li_attr : {class: 'empl-item'},
                 children: [
                     {
                         id      : 'address-' + empl.uuid,
                         text    : empl.address,
                         icon    : '/addr_icon.png',
+                        state   : {opened: !info[uuid], selected: info.selected == uuid},
                         li_attr : {class: 'addr-item'},
                     }, {
                         id      : 'salary-' + empl.uuid,
                         text    : empl.salary.toString(),
                         icon    : '/slry_icon.png',
+                        state   : {opened: !info[uuid], selected: info.selected == uuid},
                         li_attr : {class: 'slry-item'},
                     },
                 ],
@@ -94,7 +98,7 @@ var rebuild = function(obj, closed) {
                 id      : uuid,
                 text    : dept.name,
                 icon    : '/dept_icon.png',
-                state   : {opened: !closed[uuid]},
+                state   : {opened: !info[uuid], selected: info.selected == uuid},
                 li_attr : {class: 'dept-item'},
                 children: rebuildEmpls(dept.employees).concat(
                                                        rebuildDepts(dept.departments)),
@@ -112,7 +116,7 @@ var rebuild = function(obj, closed) {
                 id      : uuid,
                 text    : comp.name,
                 icon    : '/comp_icon.png',
-                state   : {opened: !closed[uuid]},
+                state   : {opened: !info[uuid], selected: info.selected == uuid},
                 li_attr : {class: 'comp-item'},
                 children: rebuildDepts(comp.departments),
             });
@@ -124,18 +128,19 @@ var rebuild = function(obj, closed) {
 }
 
 
-var gatherClosed = function(nodes) {
-    var closed = {};
+var gatherNodeInfo = function(nodes) {
+    var info = {};
 
     var recursiveGather = function(node) {
-        closed[node.id] = !node.state.opened;
+        info[node.id] = !node.state.opened;
+        if (node.state.selected) info.selected = node.id;
         for (var j = 0; j < node.children.length; ++j)
             recursiveGather(node.children[j]);
     }
 
     for (var i = 0; i < nodes.length; ++i)
         recursiveGather(nodes[i]);
-    return closed;
+    return info;
 }
 
 
@@ -148,10 +153,10 @@ var ajax = function(data) {
         showDialog($(data.html));
         break;
     case 'success':
-        var tree   = $('#company-tree');
-        var closed = gatherClosed(tree.jstree('get_json'));
+        var tree = $('#company-tree');
+        var info = gatherNodeInfo(tree.jstree('get_json'));
         tree.jstree('destroy').empty().jstree({
-            core       : {data : rebuild(data.companies, closed)},
+            core       : {data : rebuild(data.companies, info)},
             contextmenu: {items: getContextMenu},
             plugins    : ['wholerow', 'contextmenu'],
         });
@@ -198,7 +203,7 @@ var getContextMenu = function(node) {
 
     if (type & (types.COMPANY | types.DEPARTMENT)) {
         items.addDepartment = {
-            icon  : '/dept_icon.png',
+            icon  : '/dept_add.png',
             label : 'Add Department',
             action: function() { addDepartment(node); },
         };
@@ -206,14 +211,14 @@ var getContextMenu = function(node) {
 
     if (type & types.DEPARTMENT) {
         items.addEmployee = {
-            icon  : '/empl_icon.png',
+            icon  : '/empl_add.png',
             label : 'Add Employee',
             action: function() { addEmployee(node); },
         };
     }
 
     items.addCompany = {
-        icon            : '/comp_icon.png',
+        icon            : '/comp_add.png',
         label           : 'Create Company',
         action          : addCompany,
         separator_before: true,
@@ -236,10 +241,17 @@ return function() {
     $('#messages').css('position', 'absolute');
     showMessage($('.message').hide());
 
-    $('#company-tree').jstree({
-        contextmenu: {'items': getContextMenu},
-        plugins    : ['wholerow', 'contextmenu'],
-    });
+    $('#add-company').text('Create Company')
+                     .attr('data-jstree', '{"icon":"/plus.png"}');
+    $('#company-tree').on('select_node.jstree', function(e, data) {
+                           if (data.node.id == 'add-company') addCompany();
+                       })
+                      .jstree({
+                           contextmenu: {'items': getContextMenu},
+                           plugins    : ['wholerow', 'contextmenu'],
+                       });
+
+    $('#controls').append('<p>Right-click an item for a context menu.</p>');
 };
 
 }($);

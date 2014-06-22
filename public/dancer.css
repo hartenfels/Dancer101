@@ -43,6 +43,10 @@ input[type="text"] {
 }
 
 
+#add-company {
+    list-style-image: url('/comp_add.png');
+}
+
 .addr-item {
     list-style-image: url('/addr_icon.png');
 }
