@@ -13,6 +13,7 @@ class Server {
     use C101::Persistence     qw(serialize unserialize unparse);
     use C101::Sample;
 
+
     has 'companies' => (
         is       => 'ro',
         isa      => 'ArrayRef[C101::Company]',
@@ -29,7 +30,8 @@ class Server {
 
     method BUILD { $self->_uuids(uuids(@{$self->companies})) }
 
-    method save { serialize($self->companies, 'companies.bin') }
+    method save() { serialize($self->companies, 'companies.bin') }
+
 
     method _uuid(Str $key, $value?) {
         if (!defined $value) {
@@ -84,17 +86,15 @@ class Server {
     }
 
 
-    method handle_index {
+    method handle_index() {
         return $self->_get('index.tt',
             title     => 'Contribution:Dancer',
             companies => $self->companies,
         );
     };
 
-    method handle_add(HashRef $args) {
-        my $type   = $args->{type};
+    method handle_add(Str :$type, Str :$list, ArrayRef[Tuple[Str, Str]] :$validate) {
         my $uuid   = param('uuid');
-        my $list   = $args->{list};
         my $parent = $uuid ? $self->_uuid($uuid) : undef;
 
         if ($list && !$parent) {
@@ -104,7 +104,7 @@ class Server {
         }
 
         if (request->method eq 'POST') {
-            my $valid = _validate($args->{validate});
+            my $valid = _validate($validate);
             if (defined $valid) {
                 my $obj = eval { "C101::$type"->new($valid) };
                 if ($@) {
@@ -122,12 +122,11 @@ class Server {
         return $self->_get('form.tt',
             title => $list ? "Add $type to ${\$parent->name}" : "Create $type",
             url   => request->uri,
-            _entries($args->{validate}),
+            _entries($validate),
         );
     }
 
-    method handle_edit(HashRef $args) {
-        my $type = $args->{type};
+    method handle_edit(Str :$title, Str :$type, ArrayRef[Tuple[Str, Str]] :$validate) {
         my $uuid = param('uuid');
         my $obj  = $uuid ? $self->_uuid($uuid) : undef;
 
@@ -138,7 +137,7 @@ class Server {
         }
 
         if (request->method eq 'POST') {
-            my $valid = _validate($args->{validate});
+            my $valid = _validate($validate);
             if (defined $valid) {
                 my $old = {};
                 eval {
@@ -162,13 +161,13 @@ class Server {
         }
 
         return $self->_get('form.tt',
-            title => sprintf($args->{title}, $obj->name),
+            title => sprintf($title, $obj->name),
             url   => request->uri,
-            _entries($args->{validate}, $obj),
+            _entries($validate, $obj),
         );
     }
 
-    method handle_delete {
+    method handle_delete() {
         my $uuid = param('uuid');
         my $obj  = $uuid ? $self->_uuid($uuid) : undef;
 
@@ -256,4 +255,49 @@ class Server {
     }
 
 }
+
+__END__
+
+=head2 C101::Server
+
+A class for a bunch of helper operations for the Web UI feature. No parameters are
+needed for construction.
+
+Has a companies array reference that is deserialized from the file I<companies.bin> upon
+construction. There is also a hash of UUIDs mapping to their respective objects, but
+that's private.
+
+=head3 method save()
+
+Serializes the companies into the file I<companies.bin>. Returns nothing interesting.
+
+=head3 method handle_index()
+
+Handles a request for the main page and returns the response.
+
+=head3 method handle_add(Str :$type, Str :$list, ArrayRef[Tuple[Str, Str]] :$validate)
+
+Handle a GET, POST or AJAX request to add a new object to the tree. The $type is either
+C<'Company'>, C<'Department'> or C<'Employee'>. $list is the name of the list in the
+parent item. $validate contains a list of pairs. Each pair has the name of a parameter
+and the type of that parameter, which is either C<'Str'> or C<'UnsignedNum'>.
+
+This will check if the given C<param('uuid')> corresponds to a valid object, then
+validate the form parameters according to $validate and finally create the new object.
+The client is informed about success or failure.
+
+=head3 method handle_edit(Str :$title, Str :$type, ArrayRef[Tuple[Str, Str]] :$validate)
+
+Like handle_add, but for editing. Instead of a $list there is a $title that should be
+ready to be I<sprintf>ed to with the name of the object being edited. For example,
+C<'Edit Employee %s'>.
+
+=head3 method handle_delete()
+
+Handles a GET, POST or AJAX request for deleting an object.
+
+Checks if C<param('uuid')> corresponds to a valid object and then deletes that object and
+all its children from the tree and the hash of UUIDs.
+
+=cut
 

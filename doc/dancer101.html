@@ -46,6 +46,16 @@
 		</ul>
 
 		<li><a href="#c101__sample">C101::Sample</a></li>
+		<li><a href="#c101__server">C101::Server</a></li>
+		<ul>
+
+			<li><a href="#method_save__">method <code>save()</code></a></li>
+			<li><a href="#method_handle_index__">method <code>handle_index()</code></a></li>
+			<li><a href="#method_handle_add_str___type__str___list__arrayref_tuple_str__str_____validate_">method handle_add(Str :$type, Str :$list, ArrayRef[Tuple[Str, Str]] :$validate)</a></li>
+			<li><a href="#method_handle_edit_str___title__str___type__arrayref_tuple_str__str_____validate_">method handle_edit(Str :$title, Str :$type, ArrayRef[Tuple[Str, Str]] :$validate)</a></li>
+			<li><a href="#method_handle_delete__">method <code>handle_delete()</code></a></li>
+		</ul>
+
 		<li><a href="#c101__visitor">C101::Visitor</a></li>
 		<ul>
 
@@ -75,6 +85,8 @@ same, so they won't be documented explictly for every property.</p>
 <code>name</code> property from some object <code>obj</code>, you would write
 <code>my $name = $obj-&gt;name</code>. To set a name, just pass the new name as the parameter:
 <code>$obj-&gt;name($new_name)</code>.</p>
+<p>Private properties and methods start with an underscore, but their privacy isn't enforced
+by the language. Still, you shouldn't mess with them.</p>
 <p>
 </p>
 <h2><a name="c101__model">C101::Model</a></h2>
@@ -159,6 +171,44 @@ given (<code>'company'</code>, <code>'department'</code> or <code>'employee'</co
 <h2><a name="c101__sample">C101::Sample</a></h2>
 <p>Calling <code>sample()</code> will return a newly created sample Company. It's always the same
 company, only the UUIDs will differ.</p>
+<p>
+</p>
+<h2><a name="c101__server">C101::Server</a></h2>
+<p>A class for a bunch of helper operations for the Web UI feature. No parameters are
+needed for construction.</p>
+<p>Has a companies array reference that is deserialized from the file <em>companies.bin</em> upon
+construction. There is also a hash of UUIDs mapping to their respective objects, but
+that's private.</p>
+<p>
+</p>
+<h3><a name="method_save__">method <code>save()</code></a></h3>
+<p>Serializes the companies into the file <em>companies.bin</em>. Returns nothing interesting.</p>
+<p>
+</p>
+<h3><a name="method_handle_index__">method <code>handle_index()</code></a></h3>
+<p>Handles a request for the main page and returns the response.</p>
+<p>
+</p>
+<h3><a name="method_handle_add_str___type__str___list__arrayref_tuple_str__str_____validate_">method handle_add(Str :$type, Str :$list, ArrayRef[Tuple[Str, Str]] :$validate)</a></h3>
+<p>Handle a GET, POST or AJAX request to add a new object to the tree. The $type is either
+<code>'Company'</code>, <code>'Department'</code> or <code>'Employee'</code>. $list is the name of the list in the
+parent item. $validate contains a list of pairs. Each pair has the name of a parameter
+and the type of that parameter, which is either <code>'Str'</code> or <code>'UnsignedNum'</code>.</p>
+<p>This will check if the given <code>param('uuid')</code> corresponds to a valid object, then
+validate the form parameters according to $validate and finally create the new object.
+The client is informed about success or failure.</p>
+<p>
+</p>
+<h3><a name="method_handle_edit_str___title__str___type__arrayref_tuple_str__str_____validate_">method handle_edit(Str :$title, Str :$type, ArrayRef[Tuple[Str, Str]] :$validate)</a></h3>
+<p>Like handle_add, but for editing. Instead of a $list there is a $title that should be
+ready to be <em>sprintf</em>ed to with the name of the object being edited. For example,
+<code>'Edit Employee %s'</code>.</p>
+<p>
+</p>
+<h3><a name="method_handle_delete__">method <code>handle_delete()</code></a></h3>
+<p>Handles a GET, POST or AJAX request for deleting an object.</p>
+<p>Checks if <code>param('uuid')</code> corresponds to a valid object and then deletes that object and
+all its children from the tree and the hash of UUIDs.</p>
 <p>
 </p>
 <h2><a name="c101__visitor">C101::Visitor</a></h2>

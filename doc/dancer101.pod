@@ -13,5 +13,8 @@ C<name> property from some object C<obj>, you would write
 C<my $name = $obj-E<gt>name>. To set a name, just pass the new name as the parameter:
 C<$obj-E<gt>name($new_name)>.
 
+Private properties and methods start with an underscore, but their privacy isn't enforced
+by the language. Still, you shouldn't mess with them.
+
 =cut
 
