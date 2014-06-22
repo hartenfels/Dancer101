@@ -33,6 +33,8 @@ var addMessage = function(msg) {
 }
 
 
+var currentDialog;
+
 var showDialog = function(dom) {
     var sub = dom.find('[name="submit"]').hide();
     var can = dom.find('[name="cancel"]').hide();
@@ -53,6 +55,9 @@ var showDialog = function(dom) {
             show   : {effect: 'drop', direction: 'down'},
             hide   : {effect: 'drop', direction: 'up'  },
         });
+
+    try { currentDialog.dialog('close'); } catch(e) {}
+    currentDialog = dom;
 }
 
 
@@ -65,20 +70,20 @@ var rebuild = function(obj, info) {
             var uuid = 'employee-' + empl.uuid;
             nodes.push({
                 id      : uuid,
-                text    : empl.name,
+                text    : ' ' + empl.name,
                 icon    : '/empl_icon.png',
                 state   : {opened: !info[uuid], selected: info.selected == uuid},
                 li_attr : {class: 'empl-item'},
                 children: [
                     {
                         id      : 'address-' + empl.uuid,
-                        text    : empl.address,
+                        text    : ' ' + empl.address,
                         icon    : '/addr_icon.png',
                         state   : {opened: !info[uuid], selected: info.selected == uuid},
                         li_attr : {class: 'addr-item'},
                     }, {
                         id      : 'salary-' + empl.uuid,
-                        text    : empl.salary.toString(),
+                        text    : ' '  + empl.salary,
                         icon    : '/slry_icon.png',
                         state   : {opened: !info[uuid], selected: info.selected == uuid},
                         li_attr : {class: 'slry-item'},
@@ -96,7 +101,7 @@ var rebuild = function(obj, info) {
             var uuid = 'department-' + dept.uuid;
             nodes.push({
                 id      : uuid,
-                text    : dept.name,
+                text    : ' ' + dept.name,
                 icon    : '/dept_icon.png',
                 state   : {opened: !info[uuid], selected: info.selected == uuid},
                 li_attr : {class: 'dept-item'},
@@ -108,13 +113,17 @@ var rebuild = function(obj, info) {
     }
 
     var rebuildCompanies = function(companies) {
-        var nodes = [];
+        var nodes = [{
+            id  : 'add-company',
+            text: ' Create Company ',
+            icon: '/plus.png',
+        }];
         for (var i = 0; i < companies.length; ++i) {
             var comp = companies[i];
             var uuid = 'company-' + comp.uuid;
             nodes.push({
                 id      : uuid,
-                text    : comp.name,
+                text    : ' ' + comp.name,
                 icon    : '/comp_icon.png',
                 state   : {opened: !info[uuid], selected: info.selected == uuid},
                 li_attr : {class: 'comp-item'},
@@ -155,10 +164,15 @@ var ajax = function(data) {
     case 'success':
         var tree = $('#company-tree');
         var info = gatherNodeInfo(tree.jstree('get_json'));
-        tree.jstree('destroy').empty().jstree({
+        tree.jstree('destroy')
+            .empty()
+            .on('select_node.jstree', function(e, data) {
+                 if (data.node.id == 'add-company') addCompany();
+             })
+            .jstree({
             core       : {data : rebuild(data.companies, info)},
             contextmenu: {items: getContextMenu},
-            plugins    : ['wholerow', 'contextmenu'],
+            plugins    : ['wholerow', 'contextmenu', 'dnd'],
         });
         break;
     case 'failure':
@@ -241,17 +255,18 @@ return function() {
     $('#messages').css('position', 'absolute');
     showMessage($('.message').hide());
 
-    $('#add-company').text('Create Company')
+    $('#add-company').text(' Create Company')
                      .attr('data-jstree', '{"icon":"/plus.png"}');
     $('#company-tree').on('select_node.jstree', function(e, data) {
                            if (data.node.id == 'add-company') addCompany();
                        })
                       .jstree({
                            contextmenu: {'items': getContextMenu},
-                           plugins    : ['wholerow', 'contextmenu'],
+                           plugins    : ['wholerow', 'contextmenu', 'dnd'],
                        });
 
-    $('#controls').append('<p>Right-click an item for a context menu.</p>');
+    $('#info').append('<p>Right-click for a context menu.</p>')
+              .append('<p>Drag and Drop to restructure.</p>');
 };
 
 }($);

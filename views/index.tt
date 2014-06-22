@@ -41,7 +41,9 @@
     </ul>
 <% END %><% END %>
 
-<noscript><p>This page works better with JavaScript enabled.</p></noscript>
+<div id="info">
+    <noscript><p>This page works better with JavaScript enabled.</p></noscript>
+</div>
 
 <div id="company-tree">
     <ul class="companies">
