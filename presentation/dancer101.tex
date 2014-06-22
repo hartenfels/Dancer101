@@ -1,0 +1,102 @@
+\usepackage[utf8]{inputenc}
+\usepackage{graphicx}
+\beamertemplatenavigationsymbolsempty
+\usetheme{Boadilla}
+\usecolortheme{whale}
+\setbeamertemplate{itemize items}[default]
+\setbeamertemplate{enumerate items}[default]
+\defbeamertemplate*{footline}{my infolines theme} {
+\leavevmode
+\hbox{
+\begin{beamercolorbox}[wd=.333333\paperwidth,ht=2.25ex,dp=1ex,center]{author in head/foot}
+\usebeamerfont{author in head/foot}\insertshortauthor
+\end{beamercolorbox}
+\begin{beamercolorbox}[wd=.333333\paperwidth,ht=2.25ex,dp=1ex,center]{title in head/foot}
+\usebeamerfont{title in head/foot}\insertshorttitle
+\end{beamercolorbox}
+\begin{beamercolorbox}[wd=.309\paperwidth,ht=2.25ex,dp=1ex,center]{date in head/foot}
+\usebeamerfont{date in head/foot}\insertshortdate{}\hspace*{2em}
+\insertframenumber{} / \inserttotalframenumber\hspace*{2ex}
+\end{beamercolorbox}}
+\vskip0pt
+}
+\newcounter{FrameCounter}
+\newcommand{\nextframe}[0]{\stepcounter{FrameCounter}}
+\newcommand{\framecount}[1]{\frametitle{\arabic{FrameCounter}. {#1}}}
+\newcommand{\fitem}{\pause\vfill\item}
+\newcommand{\fimage}[2]{\pause\vfill\begin{center}\includegraphics[width={#2}]{#1}\end{center}}
+
+
+\title{Contribution:Dancer}
+\subtitle{Perl 5}
+\author{Carsten Hartenfels}
+\date{2014-06-23}
+
+\begin{document}
+\begin{frame}
+    \titlepage
+    \begin{center}
+        \url{http://101companies.org/wiki/Contribution:dancer}
+    \end{center}
+\end{frame}
+
+\begin{frame}
+    \frametitle{Contents}
+    \begin{enumerate}
+        \fitem Perl
+        \fitem Moops
+        \fitem Dancer
+        \fitem Showcase
+    \end{enumerate}
+\end{frame}
+
+\nextframe
+\begin{frame}
+    \framecount{Perl}
+    \begin{itemize}
+        \fitem Scripting Language of the Perl/Ruby/Python Family
+        \fitem Multi-Paradigm, TMTOWTDI
+        \fitem Implementation-Only, No Specification
+        \fitem Extensive, Centralized Module Repository (CPAN)
+    \end{itemize}
+\end{frame}
+
+\nextframe
+\begin{frame}
+    \framecount{Moops}
+    \begin{itemize}
+        \fitem Perl's OO is Orthogonal\pause, Meaning ``Stupid and Verbose''
+        \fitem Luckily, Perl is Extensible
+    \end{itemize}
+    \fimage{img/moops.png}{\textwidth}
+\end{frame}
+
+\nextframe
+\begin{frame}
+    \framecount{Dancer}
+    \begin{itemize}
+        \fitem Web Application Framework
+        \fitem Inspired by Sinatra, like Bottle, Flask, Spark etc.
+        \fitem Embedded Domain-Specific Language
+    \end{itemize}
+    \fimage{img/dancer.png}{200px}
+\end{frame}
+
+\nextframe
+\begin{frame}
+    \framecount{Showcase}
+    \begin{center}\vspace{75pt}
+        {\Huge Demonstration}
+    \end{center}
+\end{frame}
+
+\nextframe
+\begin{frame}
+    \begin{center}\vspace{70pt}
+        {\Huge Thank You All For Listening}\\
+        \vspace{54.35pt}
+        \url{http://101companies.org/wiki/Contribution:Dancer}
+    \end{center}
+\end{frame}
+\end{document}
+
