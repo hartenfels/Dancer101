@@ -4,6 +4,5 @@
 # Requires pod2html and pod2markdown.
 cat doc/dancer101.pod C101/*.pm\
   | pod2html --title=Contribution:Dancer --outfile=doc/dancer101.html
-pod2markdown doc/readme.pod readme.md
 rm *.tmp
 
