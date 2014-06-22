@@ -1,0 +1,39 @@
+=pod
+
+Implementation for L<101 Companies|http://101companies.org/>, see
+L<http://101companies.org/wiki/Contribution:dancer> for details.
+
+=head1 Requirements
+
+Since this contribution is written in it, you will need L<Perl|http://www.perl.org/>
+(Perl 5 that is). If you are using any kind of Unix-like system (e.g. Linux or Mac OSX),
+you probably already have it installed.
+
+You will also need a few Perl packages that are not part of the standard distribution.
+They are all in L<CPAN|http://www.cpan.org/>, so you can use any kind of CPAN installer
+like L<cpan|http://search.cpan.org/dist/CPAN/lib/CPAN.pm> or
+L<cpanminus|http://search.cpan.org/dist/App-cpanminus/lib/App/cpanminus.pm>.
+
+To install the packages with said installer, just run its command I<as root> with the
+packages as parameters:
+C<cpan Dancer Data::Structure::Util Data::UUID File::Slurp JSON::XS Moops> (or replace
+C<cpan> with whatever the command for your installer is called).
+
+=head1 Testing
+
+To ensure everything works, C<cd> into this project's folder and run C<test101.plx>.
+This will test all available features and report the result.
+
+=head1 Dancing
+
+To run the intersting feature of this contribution, namely the web UI, once again C<cd>
+into the project's folder, run C<dancer101.plx> and then point your browser to
+L<http://localhost:3000/>, preferably with JavaScript enabled.
+
+=head1 Documentation
+
+See the C<doc> folder for the interface documentation and the C<.plx> and C<.pm> files
+themselves for the documented code itself.
+
+=cut
+
