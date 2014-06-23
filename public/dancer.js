@@ -1,5 +1,29 @@
 var dancer = function($) {
 
+var treePlugins = ['contextmenu', 'dnd', 'types', 'wholerow'];
+var treeTypes   = {
+    company: {
+        icon          : '/comp_icon.png',
+        valid_children: ['department'],
+    },
+    department: {
+        icon          : '/dept_icon.png',
+        valid_children: ['department', 'employee'],
+    },
+    employee: {
+        icon          : '/empl_icon.png',
+        valid_children: [],
+    },
+    address: {
+        icon          : '/addr_icon.png',
+        valid_children: [],
+    },
+    salary: {
+        icon          : '/slry_icon.png',
+        valid_children: [],
+    },
+};
+
 var types = {
     COMPANY   : 0x1,
     DEPARTMENT: 0x2,
@@ -71,20 +95,20 @@ var rebuild = function(obj, info) {
             nodes.push({
                 id      : uuid,
                 text    : ' ' + empl.name,
-                icon    : '/empl_icon.png',
+                type    : 'employee',
                 state   : {opened: !info[uuid], selected: info.selected == uuid},
                 li_attr : {class: 'empl-item'},
                 children: [
                     {
                         id      : 'address-' + empl.uuid,
                         text    : ' ' + empl.address,
-                        icon    : '/addr_icon.png',
+                        type    : 'address',
                         state   : {opened: !info[uuid], selected: info.selected == uuid},
                         li_attr : {class: 'addr-item'},
                     }, {
                         id      : 'salary-' + empl.uuid,
                         text    : ' '  + empl.salary,
-                        icon    : '/slry_icon.png',
+                        type    : 'address',
                         state   : {opened: !info[uuid], selected: info.selected == uuid},
                         li_attr : {class: 'slry-item'},
                     },
@@ -102,7 +126,7 @@ var rebuild = function(obj, info) {
             nodes.push({
                 id      : uuid,
                 text    : ' ' + dept.name,
-                icon    : '/dept_icon.png',
+                type    : 'department',
                 state   : {opened: !info[uuid], selected: info.selected == uuid},
                 li_attr : {class: 'dept-item'},
                 children: rebuildEmpls(dept.employees).concat(
@@ -124,7 +148,7 @@ var rebuild = function(obj, info) {
             nodes.push({
                 id      : uuid,
                 text    : ' ' + comp.name,
-                icon    : '/comp_icon.png',
+                type    : 'company',
                 state   : {opened: !info[uuid], selected: info.selected == uuid},
                 li_attr : {class: 'comp-item'},
                 children: rebuildDepts(comp.departments),
@@ -170,10 +194,11 @@ var ajax = function(data) {
                  if (data.node.id == 'add-company') addCompany();
              })
             .jstree({
-            core       : {data : rebuild(data.companies, info)},
-            contextmenu: {items: getContextMenu},
-            plugins    : ['wholerow', 'contextmenu', 'dnd'],
-        });
+                 core       : {data : rebuild(data.companies, info)},
+                 contextmenu: {items: getContextMenu},
+                 plugins    : treePlugins,
+                 types      : treeTypes,
+             });
         break;
     case 'failure':
         break;
@@ -246,11 +271,11 @@ return function() {
     $('noscript').remove();
     $('.edit'   ).remove();
 
-    $('.comp-item').attr('data-jstree', '{"icon":"/comp_icon.png", "opened":true}');
-    $('.dept-item').attr('data-jstree', '{"icon":"/dept_icon.png"}');
-    $('.empl-item').attr('data-jstree', '{"icon":"/empl_icon.png"}');
-    $('.addr-item').attr('data-jstree', '{"icon":"/addr_icon.png"}');
-    $('.slry-item').attr('data-jstree', '{"icon":"/slry_icon.png"}');
+    $('.comp-item').attr('data-jstree', '{"type":"company", "opened":true}');
+    $('.dept-item').attr('data-jstree', '{"type":"department"}');
+    $('.empl-item').attr('data-jstree', '{"type":"employee"}');
+    $('.addr-item').attr('data-jstree', '{"type":"address"}');
+    $('.slry-item').attr('data-jstree', '{"type":"salary"}');
 
     $('#messages').css('position', 'absolute');
     showMessage($('.message').hide());
@@ -262,11 +287,11 @@ return function() {
                        })
                       .jstree({
                            contextmenu: {'items': getContextMenu},
-                           plugins    : ['wholerow', 'contextmenu', 'dnd'],
+                           plugins    : treePlugins,
+                           types      : treeTypes,
                        });
 
-    $('#info').append('<p>Right-click for a context menu.</p>')
-              .append('<p>Drag and Drop to restructure.</p>');
+    $('#info').append('<p>Right-click for a context menu.</p>');
 };
 
 }($);
