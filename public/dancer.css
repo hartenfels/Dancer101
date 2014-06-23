@@ -44,7 +44,7 @@ input[type="text"] {
 
 
 #add-company {
-    list-style-image: url('/comp_add.png');
+    list-style-image: url('/plus.png');
 }
 
 .addr-item {
