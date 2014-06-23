@@ -3,6 +3,7 @@ use strict;
 use warnings;
 use Dancer;
 use Dancer::Plugin::Ajax;
+use C101::Operations     qw(cut median total);
 use C101::Server;
 
 set( 
@@ -90,6 +91,28 @@ my $delete = sub {
     $server->handle_delete;
 };
 
+my $cut = sub {
+    $server->handle_operation({
+        op      => \&cut,
+        message => 'Salaries in %s were cut.',
+        mutate  => 1,
+    });
+};
+
+my $median = sub {
+    $server->handle_operation({
+        op      => \&median,
+        message => 'Median of %s: %s',
+    });
+};
+
+my $total = sub {
+    $server->handle_operation({
+        op      => \&total,
+        message => 'Total of %s: %s',
+    });
+};
+
 
 get                    '/'                      => $index;
 ajax                   '/add'                   => $add_company;
@@ -110,6 +133,12 @@ ajax                   '/edit/salary/:uuid'     => $edit_salary;
 any ['get', 'post'] => '/edit/salary/:uuid'     => $edit_salary;
 ajax                   '/delete/:uuid'          => $delete;
 any ['get', 'post'] => '/delete/:uuid'          => $delete;
+get                    '/cut/:uuid'             => $cut;
+ajax                   '/cut/:uuid'             => $cut;
+get                    '/median/:uuid'          => $median;
+ajax                   '/median/:uuid'          => $median;
+get                    '/total/:uuid'           => $total;
+ajax                   '/total/:uuid'           => $total;
 
 
 # Exit gracefully so that all destructors will be called.

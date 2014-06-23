@@ -74,6 +74,17 @@ class Server {
         }
     }
 
+    method _info {
+        if (request->is_ajax) {
+            $self->_jsonify(
+                messages => _messages(),
+                type     => 'info',
+            );
+        } else {
+            redirect '/';
+        }
+    }
+
     method _failure {
         if (request->is_ajax) {
             $self->_jsonify(
@@ -194,6 +205,21 @@ class Server {
             object => $obj,
             url    => request->uri,
         );
+    }
+
+    method handle_operation(CodeRef :$op, Str :$message, Bool :$mutate = 0) {
+        my $uuid = param('uuid');
+        my $obj  = $uuid ? $self->_uuid($uuid) : undef;
+
+        if (!$obj) {
+            _set_error("The UUID $uuid does not correspond to anything. "
+                      . 'Either you accessed a broken link or the object was modified.');
+            return $self->_failure;
+        }
+
+        my $result = &$op($obj);
+        _set_message(sprintf($message, $obj->name, $result));
+        return $mutate ? $self->_success : $self->_info;
     }
 
 

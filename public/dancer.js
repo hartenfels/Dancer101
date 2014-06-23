@@ -1,6 +1,6 @@
 var dancer = function($) {
 
-var treePlugins = ['contextmenu', 'dnd', 'types', 'wholerow'];
+var treePlugins = ['contextmenu', 'types', 'wholerow'];
 var treeTypes   = {
     company: {
         icon          : '/comp_icon.png',
@@ -201,25 +201,11 @@ var ajax = function(data) {
              });
         break;
     case 'failure':
+    case 'info':
         break;
     default:
         throw 'Unknown AJAX response type: ' + data.type;
     }
-};
-
-
-var edit = function(n) { $.get('/edit/' + n.id.replace('-', '/'), {}, ajax, 'json'); };
-
-var remove = function(n) { $.get('/delete/' + getUuidFromId(n.id), {}, ajax, 'json'); };
-
-var addCompany = function() { $.get('/add', {}, ajax, 'json'); };
-
-var addDepartment = function(n) {
-    $.get('/add/department/' + getUuidFromId(n.id), {}, ajax, 'json');
-};
-
-var addEmployee = function(n) {
-    $.get('/add/employee/' + getUuidFromId(n.id), {}, ajax, 'json');
 };
 
 
@@ -228,15 +214,41 @@ var getContextMenu = function(node) {
     var type  = getTypeFromId(id);
 
     var items = {
+        cut: {
+            label: 'Cut',
+            action: function() {
+                $.post('/cut/' + getUuidFromId(id), {}, ajax, 'json');
+            },
+        },
+
+        median: {
+            label: 'Median',
+            action: function() {
+                $.post('/median/' + getUuidFromId(id), {}, ajax, 'json');
+            },
+        },
+
+        total: {
+            label: 'Total',
+            action: function() {
+                $.post('/total/' + getUuidFromId(id), {}, ajax, 'json');
+            },
+        },
+
         edit: {
-            label : 'Edit',
-            action: function() { edit(node); },
+            label           : 'Edit',
+            separator_before: true,
+            action          : function() {
+                $.get('/edit/' + id.replace('-', '/'), {}, ajax, 'json');
+            },
         },
 
         remove: {
             label          : 'Delete',
-            action         : function() { remove(node); },
             separator_after: true,
+            action         : function() {
+                $.get('/delete/' + getUuidFromId(id), {}, ajax, 'json');
+            },
         },
     };
 
@@ -244,7 +256,9 @@ var getContextMenu = function(node) {
         items.addDepartment = {
             icon  : '/dept_add.png',
             label : 'Add Department',
-            action: function() { addDepartment(node); },
+            action: function() {
+                $.get('/add/department/' + getUuidFromId(id), {}, ajax, 'json');
+            },
         };
     }
 
@@ -252,15 +266,19 @@ var getContextMenu = function(node) {
         items.addEmployee = {
             icon  : '/empl_add.png',
             label : 'Add Employee',
-            action: function() { addEmployee(node); },
+            action: function() {
+                $.get('/add/employee/' + getUuidFromId(id), {}, ajax, 'json');
+            },
         };
     }
 
     items.addCompany = {
         icon            : '/comp_add.png',
         label           : 'Create Company',
-        action          : addCompany,
         separator_before: true,
+        action          : function() {
+            $.get('/add', {}, ajax, 'json');
+        },
     };
 
     return items;
