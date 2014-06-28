@@ -209,6 +209,8 @@ var ajax = function(data) {
 };
 
 
+var addCompany = function() { $.get('/add', {}, ajax, 'json'); }
+
 var getContextMenu = function(node) {
     var id    = node.id;
     var type  = getTypeFromId(id);
@@ -276,9 +278,7 @@ var getContextMenu = function(node) {
         icon            : '/comp_add.png',
         label           : 'Create Company',
         separator_before: true,
-        action          : function() {
-            $.get('/add', {}, ajax, 'json');
-        },
+        action          : addCompany,
     };
 
     return items;
