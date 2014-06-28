@@ -2,8 +2,8 @@
 use strict;
 use warnings;
 use Storable;
-use File::Slurp 'slurp';
-use Test::More tests => 8;
+use File::Slurp       qw(slurp);
+use Test::More        tests => 8;
 use C101::Sample;
 use C101::Operations  qw(cut depth median total uuids);
 use C101::Persistence qw(serialize unserialize unparse);
