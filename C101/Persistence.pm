@@ -8,16 +8,20 @@ use Storable              qw(store retrieve dclone);
 
 use vars qw(@ISA @EXPORT_OK);
 @ISA       = ('Exporter');
-@EXPORT_OK = qw(serialize unserialize unparse);
+@EXPORT_OK = qw(serialize unserialize plainify unparse);
 
 sub serialize   {    store(@_) }
 
 sub unserialize { retrieve(@_) }
 
-sub unparse {
+sub plainify {
     my $list = [];
     push($list, unbless(dclone($_))) for @_;
-    JSON::XS->new->utf8->canonical->indent->space_after->encode($list);
+    return $list;
+}
+
+sub unparse {
+    JSON::XS->new->utf8->canonical->indent->space_after->encode(plainify(@_));
 }
 
 # private

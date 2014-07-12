@@ -1,9 +1,12 @@
 #!/usr/bin/perl
 use strict;
 use warnings;
+use feature              qw(say switch);
 use Dancer;
 use Dancer::Plugin::Ajax;
+use Data::Dumper;
 use C101::Operations     qw(cut median total);
+use C101::Persistence    qw(plainify);
 use C101::Server;
 
 set( 
@@ -15,130 +18,53 @@ set(
     show_errors  => 1,
     startup_info => 1,
     warnings     => 1,
+    serializer   => 'JSON',
 );
 
 
 my $server = C101::Server->new;
 
-my $index = sub {
-    $server->handle_index;
+ajax '/' => sub {
+    my $type = param('type');
+    if ($type eq 'config') {
+        return {
+            method => 'ajax',
+            urls   => {
+                tree => '/tree',
+            },
+            types  => {
+                company    => {
+                    icon           => '/comp_icon.png',
+                    valid_children => ['department'],
+                },
+                department => {
+                    icon           => '/dept_icon.png',
+                    valid_children => ['department', 'employee'],
+                },
+                employee   => {
+                    icon           => '/empl_icon.png',
+                    text           => {
+                        format => '%s, %s, $%.2f',
+                        args   => ['name', 'address', 'salary'],
+                    },
+                },
+            },
+        };
+    } else {
+        return {
+            messages => {
+                text => "Unknown request: $type",
+                type => 'error'
+            },
+        };
+    }
 };
 
-my $add_company = sub {
-    $server->handle_add({
-        type     => 'Company',
-        validate => [[name => 'Str']],
-    })
+ajax '/tree' => sub { 
+    return {companies => plainify(@{$server->companies})};
 };
 
-my $edit_company = sub {
-    $server->handle_edit({
-        title    => 'Edit Company %s',
-        type     => 'Company',
-        validate => [[name => 'Str']],
-    })
-};
-
-my $add_department = sub {
-    $server->handle_add({
-        type     => 'Department',
-        list     => 'departments',
-        validate => [[name => 'Str']],
-    })
-};
-
-my $edit_department = sub {
-    $server->handle_edit({
-        title    => 'Edit Department %s',
-        type     => 'Department',
-        validate => [[name => 'Str']],
-    })
-};
-
-my $add_employee = sub {
-    $server->handle_add({
-        type     => 'Employee',
-        list     => 'employees',
-        validate => [[name => 'Str'], [address => 'Str'], [salary => 'UnsignedNum']],
-    })
-};
-
-my $edit_employee = sub {
-    $server->handle_edit({
-        title    => 'Edit Employee %s',
-        type     => 'Employee',
-        validate => [[name => 'Str'], [address => 'Str'], [salary => 'UnsignedNum']],
-    })
-};
-
-my $edit_address = sub {
-    $server->handle_edit({
-        title    => 'Edit Address of Employee %s',
-        type     => 'Employee',
-        validate => [[address => 'Str']],
-    })
-};
-
-my $edit_salary = sub {
-    $server->handle_edit({
-        title    => 'Edit Salary of Employee %s',
-        type     => 'Employee',
-        validate => [[salary => 'UnsignedNum']],
-    })
-};
-
-my $delete = sub {
-    $server->handle_delete;
-};
-
-my $cut = sub {
-    $server->handle_operation({
-        op      => \&cut,
-        message => 'Salaries in %s were cut.',
-        mutate  => 1,
-    });
-};
-
-my $median = sub {
-    $server->handle_operation({
-        op      => \&median,
-        message => 'Median of %s: %s',
-    });
-};
-
-my $total = sub {
-    $server->handle_operation({
-        op      => \&total,
-        message => 'Total of %s: %s',
-    });
-};
-
-
-get                    '/'                      => $index;
-ajax                   '/add'                   => $add_company;
-any ['get', 'post'] => '/add'                   => $add_company;
-ajax                   '/edit/company/:uuid'    => $edit_company;
-any ['get', 'post'] => '/edit/company/:uuid'    => $edit_company;
-ajax                   '/add/department/:uuid'  => $add_department;
-any ['get', 'post'] => '/add/department/:uuid'  => $add_department;
-ajax                   '/edit/department/:uuid' => $edit_department;
-any ['get', 'post'] => '/edit/department/:uuid' => $edit_department;
-ajax                   '/add/employee/:uuid'    => $add_employee;
-any ['get', 'post'] => '/add/employee/:uuid'    => $add_employee;
-ajax                   '/edit/employee/:uuid'   => $edit_employee;
-any ['get', 'post'] => '/edit/employee/:uuid'   => $edit_employee;
-ajax                   '/edit/address/:uuid'    => $edit_address;
-any ['get', 'post'] => '/edit/address/:uuid'    => $edit_address;
-ajax                   '/edit/salary/:uuid'     => $edit_salary;
-any ['get', 'post'] => '/edit/salary/:uuid'     => $edit_salary;
-ajax                   '/delete/:uuid'          => $delete;
-any ['get', 'post'] => '/delete/:uuid'          => $delete;
-get                    '/cut/:uuid'             => $cut;
-ajax                   '/cut/:uuid'             => $cut;
-get                    '/median/:uuid'          => $median;
-ajax                   '/median/:uuid'          => $median;
-get                    '/total/:uuid'           => $total;
-ajax                   '/total/:uuid'           => $total;
+get '/' => sub { send_file '/web_ui.html' };
 
 
 # Exit gracefully so that all destructors will be called.
