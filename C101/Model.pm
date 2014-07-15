@@ -35,9 +35,9 @@ class Model {
     }
 
     method visit(C101::Visitor $visitor, $parent?, $index?) {
-        my $vn    = $self->visit_name;
-        my $begin = "begin_$vn";
-        my $end   = "end_$vn";
+        my $type  = $self->type_name;
+        my $begin = "begin_$type";
+        my $end   = "end_$type";
 
         &{$visitor->$begin}($visitor, $self, $parent, $index);
 
@@ -56,6 +56,19 @@ class Model {
         }
 
         &{$visitor->$end}($visitor, $self, $parent, $index);
+    }
+
+    method json_properties() {(
+        type => $self->type_name,
+        id   => $self->uuid,
+        text => $self->name,
+    )}
+
+    method TO_JSON {
+        my $h = {$self->json_properties};
+        push @{$h->{children}}, @{$self->employees  } if $self->does('C101::Employees'  );
+        push @{$h->{children}}, @{$self->departments} if $self->does('C101::Departments');
+        return $h;
     }
 }
 
@@ -80,11 +93,11 @@ role Employees {
 
 
 class Company    extends Model with Departments {
-    method visit_name { 'company' }
+    method type_name { 'company' }
 }
 
 class Department extends Model with Departments, Employees {
-    method visit_name { 'department' }
+    method type_name { 'department' }
 }
 
 class Employee   extends Model types Types101 {
@@ -100,7 +113,15 @@ class Employee   extends Model types Types101 {
         required => 1,
     );
 
-    method visit_name { 'employee' }
+    method type_name { 'employee' }
+
+    method json_properties {(
+        type    => $self->type_name,
+        id      => $self->uuid,
+        text    => $self->name,
+        address => $self->address,
+        salary  => $self->salary,
+    )}
 }
 
 __END__

@@ -1,10 +1,29 @@
 webUi = (($) ->
-    METHODS =
-        ajax : {}
-    REQUIRED_URLS = ['tree']
     # These should probably be @types and @urls, but that don't work. I assume because I
     # just don't get how ``this'' works in JavaScript. So trailing underscores it is.
-    types_ = urls_ = undefined
+    types_ = method_ = menu_ = undefined
+
+
+    ajax =
+        buildTree : () ->
+            $msg = addMessage('Getting tree...', 'load')
+            $.get(method_.tree_url, {type : 'tree'})
+            .done (data) ->
+                try
+                    nodes = nodesFromData(if $.isArray(data) then data else [data])
+                    $('#tree').jstree
+                        core        : {data  : nodes}
+                        contextmenu : {items : menu_}
+                        plugins     : ['contextmenu', 'dnd', 'types', 'wholerow']
+                        types       : types_
+                catch e
+                    addMessage("Fatal Error: #{e}", 'error')
+            .fail   -> addMessage('Fatal Error: Could not get tree from server.', 'error')
+            .always -> removeMessage($msg)
+            .always    handleMessages
+
+        executeAction : (key, node) ->
+            console.debug key, node, $('#tree').jstree().get_node(node.reference)
 
 
     ### addMessage(Str text, Str classes?)
@@ -52,47 +71,50 @@ webUi = (($) ->
 
 
 
-    nodeFromData = (type, data) ->
-        typeInfo = types_[type] or throw "Got invalid type from server: #{type}"
-        if ('text' of typeInfo)
-            args    = []
-            args[i] = data[arg] for arg, i in typeInfo.text.args
-            text    = vsprintf(typeInfo.text.format, args)
-        node    =
-            type     : type
-            id       : data.uuid
-            text     : text || data.name
-            children : nodesFromData(data)
+    nodeFromData = (data) ->
+        type = types_[data.type] or throw "Unknown type: #{data.type}"
+        if ('printf' of type)
+            args      = []
+            args[i]   = data[arg] for arg, i in type.printf.args
+            formatted = vsprintf(type.printf.format, args)
+        node =
+            type     : data.type
+            id       : data.id
+            text     : formatted || data.text
+        node['state'   ] = data.state                   if 'state'    of data
+        node['children'] = nodesFromData(data.children) if 'children' of data
+        return node
 
 
-    nodesFromData = (data) ->
+    nodesFromData = (list) ->
         nodes = []
-        if 'employees'   of data
-            nodes.push(nodeFromData('employee',   e)) for e in data.employees
-        if 'departments' of data
-            nodes.push(nodeFromData('department', d)) for d in data.departments
-        if 'companies'   of data
-            nodes.push(nodeFromData('company',    c)) for c in data.companies
+        nodes.push(nodeFromData(n)) for n in list
         return nodes
 
 
+    buildAction = (key, value, separator) ->
+        action = {action : (node) -> method_.executeAction(key, node)}
+        if typeof value is 'string'
+            action['label'] = value
+        else
+            action['label'] = value.text or throw "Missing text for action #{k}"
+            action['icon' ] = value.icon if 'icon' of value
+        action['separator_before'] = true if separator
+        return action
 
-    buildTree = ->
-        $msg = addMessage('Getting tree...', 'load')
-        $.get(urls_.tree, {type : 'tree'})
-        .done (data) ->
-            try
-                nodes = nodesFromData(data)
-                $('#tree').jstree
-                    core    : { data : nodes }
-                    plugins : ['contextmenu', 'dnd', 'types', 'wholerow']
-                    types   : types_
-            catch e
-                addMessage("Fatal Error: #{e}", 'error')
-        .fail   -> addMessage('Fatal Error: Could not get tree from server.', 'error')
-        .always -> removeMessage($msg)
-        .always    handleMessages
-
+    buildMenu = (types, actions) ->
+        menus     = {}
+        separator = false
+        for t, v of types
+            menus[t] = {}
+            for a in v.actions
+                if a
+                    throw "Unknown action: #{a}" if not a of actions
+                    menus[t][a] = buildAction(a, actions[a], separator)
+                    separator   = false
+                else
+                    separator = true
+        return (node) -> menus[node.type]
 
     ### init()
     Loads the configuration information from the server via AJAX and then does a bunch of
@@ -101,33 +123,35 @@ webUi = (($) ->
     init = ->
         $msg = addMessage('Getting server configuration...', 'load')
         $.get('/', {type : 'config'})
-        .done ({method, urls, types}) ->
+        .done ({method, types, actions}) ->
             try
                 errs = []
 
-                if ms = METHODS[method]
-                    # TODO
-                else
-                    errs.push('Server did not return valid method.')
+                switch method.name
+                    when 'ajax'
+                        'tree_url'    of method or errs.push('ajax missing tree_url.'   )
+                        'action_urls' of method or errs.push('ajax missing action_urls.')
+                        break if errs.length
+                        ajax.tree_url    = method.tree_url
+                        ajax.action_urls = method.action_urls
+                        method_          = ajax
+                    else
+                        errs.push("Unsupported method: #{method.name}")
 
-                if urls
-                    for u in REQUIRED_URLS
-                        errs.push("Missing required URL for #{u}.") unless u of urls
-                else
-                    errs.push('Server did not return valid URLs.')
-
-                errs.push('Server did not return valid types') if not types
+                errs.push('Server did not return valid types.'  ) unless types
+                errs.push('Server did not return valid actions.') unless actions
 
                 throw errs if errs.length
                 types_ = types
-                urls_  = urls
-                buildTree()
+                menu_  = buildMenu(types, actions)
+                method_.buildTree()
 
             catch es
                 if $.isArray(es)
                     addMessage("Fatal Error: #{e}",  'error') for e in es
                 else
                     addMessage("Fatal Error: #{es}", 'error')
+                throw es
             return
         .fail   -> addMessage('Fatal Error: Could not get server configuration.', 'error')
         .always -> removeMessage($msg)

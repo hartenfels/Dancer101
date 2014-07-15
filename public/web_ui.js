@@ -3,12 +3,42 @@
   var webUi;
 
   webUi = (function($) {
-    var METHODS, REQUIRED_URLS, addMessage, buildTree, handleMessage, handleMessages, init, nodeFromData, nodesFromData, notice, removeMessage, types_, urls_;
-    METHODS = {
-      ajax: {}
+    var addMessage, ajax, buildAction, buildMenu, handleMessage, handleMessages, init, menu_, method_, nodeFromData, nodesFromData, notice, removeMessage, types_;
+    types_ = method_ = menu_ = void 0;
+    ajax = {
+      buildTree: function() {
+        var $msg;
+        $msg = addMessage('Getting tree...', 'load');
+        return $.get(method_.tree_url, {
+          type: 'tree'
+        }).done(function(data) {
+          var e, nodes;
+          try {
+            nodes = nodesFromData($.isArray(data) ? data : [data]);
+            return $('#tree').jstree({
+              core: {
+                data: nodes
+              },
+              contextmenu: {
+                items: menu_
+              },
+              plugins: ['contextmenu', 'dnd', 'types', 'wholerow'],
+              types: types_
+            });
+          } catch (_error) {
+            e = _error;
+            return addMessage("Fatal Error: " + e, 'error');
+          }
+        }).fail(function() {
+          return addMessage('Fatal Error: Could not get tree from server.', 'error');
+        }).always(function() {
+          return removeMessage($msg);
+        }).always(handleMessages);
+      },
+      executeAction: function(key, node) {
+        return console.debug(key, node, $('#tree').jstree().get_node(node.reference));
+      }
     };
-    REQUIRED_URLS = ['tree'];
-    types_ = urls_ = void 0;
 
     /* addMessage(Str text, Str classes?)
     Shows a message with the given text. Additional CSS classes may be given as a
@@ -75,78 +105,88 @@
         }
       }
     };
-    nodeFromData = function(type, data) {
-      var arg, args, i, node, text, typeInfo, _i, _len, _ref;
-      typeInfo = types_[type] || (function() {
-        throw "Got invalid type from server: " + type;
+    nodeFromData = function(data) {
+      var arg, args, formatted, i, node, type, _i, _len, _ref;
+      type = types_[data.type] || (function() {
+        throw "Unknown type: " + data.type;
       })();
-      if ('text' in typeInfo) {
+      if ('printf' in type) {
         args = [];
-        _ref = typeInfo.text.args;
+        _ref = type.printf.args;
         for (i = _i = 0, _len = _ref.length; _i < _len; i = ++_i) {
           arg = _ref[i];
           args[i] = data[arg];
         }
-        text = vsprintf(typeInfo.text.format, args);
+        formatted = vsprintf(type.printf.format, args);
       }
-      return node = {
-        type: type,
-        id: data.uuid,
-        text: text || data.name,
-        children: nodesFromData(data)
+      node = {
+        type: data.type,
+        id: data.id,
+        text: formatted || data.text
       };
+      if ('state' in data) {
+        node['state'] = data.state;
+      }
+      if ('children' in data) {
+        node['children'] = nodesFromData(data.children);
+      }
+      return node;
     };
-    nodesFromData = function(data) {
-      var c, d, e, nodes, _i, _j, _k, _len, _len1, _len2, _ref, _ref1, _ref2;
+    nodesFromData = function(list) {
+      var n, nodes, _i, _len;
       nodes = [];
-      if ('employees' in data) {
-        _ref = data.employees;
-        for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-          e = _ref[_i];
-          nodes.push(nodeFromData('employee', e));
-        }
-      }
-      if ('departments' in data) {
-        _ref1 = data.departments;
-        for (_j = 0, _len1 = _ref1.length; _j < _len1; _j++) {
-          d = _ref1[_j];
-          nodes.push(nodeFromData('department', d));
-        }
-      }
-      if ('companies' in data) {
-        _ref2 = data.companies;
-        for (_k = 0, _len2 = _ref2.length; _k < _len2; _k++) {
-          c = _ref2[_k];
-          nodes.push(nodeFromData('company', c));
-        }
+      for (_i = 0, _len = list.length; _i < _len; _i++) {
+        n = list[_i];
+        nodes.push(nodeFromData(n));
       }
       return nodes;
     };
-    buildTree = function() {
-      var $msg;
-      $msg = addMessage('Getting tree...', 'load');
-      return $.get(urls_.tree, {
-        type: 'tree'
-      }).done(function(data) {
-        var e, nodes;
-        try {
-          nodes = nodesFromData(data);
-          return $('#tree').jstree({
-            core: {
-              data: nodes
-            },
-            plugins: ['contextmenu', 'dnd', 'types', 'wholerow'],
-            types: types_
-          });
-        } catch (_error) {
-          e = _error;
-          return addMessage("Fatal Error: " + e, 'error');
+    buildAction = function(key, value, separator) {
+      var action;
+      action = {
+        action: function(node) {
+          return method_.executeAction(key, node);
         }
-      }).fail(function() {
-        return addMessage('Fatal Error: Could not get tree from server.', 'error');
-      }).always(function() {
-        return removeMessage($msg);
-      }).always(handleMessages);
+      };
+      if (typeof value === 'string') {
+        action['label'] = value;
+      } else {
+        action['label'] = value.text || (function() {
+          throw "Missing text for action " + k;
+        })();
+        if ('icon' in value) {
+          action['icon'] = value.icon;
+        }
+      }
+      if (separator) {
+        action['separator_before'] = true;
+      }
+      return action;
+    };
+    buildMenu = function(types, actions) {
+      var a, menus, separator, t, v, _i, _len, _ref;
+      menus = {};
+      separator = false;
+      for (t in types) {
+        v = types[t];
+        menus[t] = {};
+        _ref = v.actions;
+        for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+          a = _ref[_i];
+          if (a) {
+            if (!a in actions) {
+              throw "Unknown action: " + a;
+            }
+            menus[t][a] = buildAction(a, actions[a], separator);
+            separator = false;
+          } else {
+            separator = true;
+          }
+        }
+      }
+      return function(node) {
+        return menus[node.type];
+      };
     };
 
     /* init()
@@ -160,44 +200,47 @@
       return $.get('/', {
         type: 'config'
       }).done(function(_arg) {
-        var e, errs, es, method, ms, types, u, urls, _i, _j, _len, _len1;
-        method = _arg.method, urls = _arg.urls, types = _arg.types;
+        var actions, e, errs, es, method, types, _i, _len;
+        method = _arg.method, types = _arg.types, actions = _arg.actions;
         try {
           errs = [];
-          if (ms = METHODS[method]) {
-
-          } else {
-            errs.push('Server did not return valid method.');
-          }
-          if (urls) {
-            for (_i = 0, _len = REQUIRED_URLS.length; _i < _len; _i++) {
-              u = REQUIRED_URLS[_i];
-              if (!(u in urls)) {
-                errs.push("Missing required URL for " + u + ".");
+          switch (method.name) {
+            case 'ajax':
+              'tree_url' in method || errs.push('ajax missing tree_url.');
+              'action_urls' in method || errs.push('ajax missing action_urls.');
+              if (errs.length) {
+                break;
               }
-            }
-          } else {
-            errs.push('Server did not return valid URLs.');
+              ajax.tree_url = method.tree_url;
+              ajax.action_urls = method.action_urls;
+              method_ = ajax;
+              break;
+            default:
+              errs.push("Unsupported method: " + method.name);
           }
           if (!types) {
-            errs.push('Server did not return valid types');
+            errs.push('Server did not return valid types.');
+          }
+          if (!actions) {
+            errs.push('Server did not return valid actions.');
           }
           if (errs.length) {
             throw errs;
           }
           types_ = types;
-          urls_ = urls;
-          buildTree();
+          menu_ = buildMenu(types, actions);
+          method_.buildTree();
         } catch (_error) {
           es = _error;
           if ($.isArray(es)) {
-            for (_j = 0, _len1 = es.length; _j < _len1; _j++) {
-              e = es[_j];
+            for (_i = 0, _len = es.length; _i < _len; _i++) {
+              e = es[_i];
               addMessage("Fatal Error: " + e, 'error');
             }
           } else {
             addMessage("Fatal Error: " + es, 'error');
           }
+          throw es;
         }
       }).fail(function() {
         return addMessage('Fatal Error: Could not get server configuration.', 'error');
