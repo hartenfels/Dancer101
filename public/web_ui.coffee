@@ -1,4 +1,4 @@
-webUi = (($) ->
+webUi = ($) ->
     # These should probably be @types and @urls, but that don't work. I assume because I
     # just don't get how ``this'' works in JavaScript. So trailing underscores it is.
     types_ = method_ = menu_ = undefined
@@ -12,8 +12,14 @@ webUi = (($) ->
                 try
                     nodes = nodesFromData(if $.isArray(data) then data else [data])
                     $('#tree').jstree
-                        core        : {data  : nodes}
-                        contextmenu : {items : menu_}
+                        core        :
+                            data           : nodes
+                            check_callback : handleDrag
+                        contextmenu :
+                            items : menu_
+                        dnd         :
+                            check_while_dragging : false
+                            copy                 : false
                         plugins     : ['contextmenu', 'dnd', 'types', 'wholerow']
                         types       : types_
                 catch e
@@ -22,8 +28,28 @@ webUi = (($) ->
             .always -> removeMessage($msg)
             .always    handleMessages
 
-        executeAction : (key, node) ->
-            console.debug key, node, $('#tree').jstree().get_node(node.reference)
+        executeAction : ($msg, key, id, targetId) ->
+            action =
+                type : key
+                id   : id
+            action.target = targetId if targetId?
+            url = method_.action_urls[key] or throw "ajax: no URL for action #{key}."
+            $.post(url, action)
+            .done (data)    -> handleCommands(data)
+            .fail (_, s, e) -> notice("#{s}: #{e}", 'error')
+            .always         -> removeMessage($msg)
+            .always            handleMessages
+
+
+    executeAction = (label, key, node) ->
+        $msg = addMessage("Executing #{label}...", 'load')
+        try
+            id  = $('#tree').jstree().get_node(node.reference).id
+            method_.executeAction($msg, key, id)
+        catch e
+            removeMessage($msg)
+            notice(e, 'error')
+        return
 
 
     ### addMessage(Str text, Str classes?)
@@ -65,10 +91,37 @@ webUi = (($) ->
     handleMessages = (data) ->
         if data && 'messages' of data && messages = data.messages
             if   $.isArray(messages)
-            then handleMessage(m) for m in messages
+            then handleMessage(msg) for msg in messages
             else handleMessage(messages)
         return
 
+
+    handleCommand = (com) ->
+        console.debug com
+
+
+    handleCommands = (data) ->
+        if data && 'commands' of data && commands = data.commands
+            if $.isArray(commands)
+            then handleCommand(com) for com in commands
+            else handleCommand(commands)
+        return
+
+
+    handleDrag = (op, node, parent) ->
+        if op is 'move_node'
+            ts = types_[parent.type]
+            if ts && ts.children && node.type in ts.children
+                $msg = addMessage("Restructuring...", 'load')
+                try
+                    method_.executeAction($msg, 'restructure', node.id, parent.id)
+                catch e
+                    removeMessage($msg)
+                    notice(e, 'error')
+            else
+                notice("Restructuring Error: #{node.type} can't
+                        be child of #{parent.type}.", 'error')
+        return false
 
 
     nodeFromData = (data) ->
@@ -81,8 +134,8 @@ webUi = (($) ->
             type     : data.type
             id       : data.id
             text     : formatted || data.text
-        node['state'   ] = data.state                   if 'state'    of data
-        node['children'] = nodesFromData(data.children) if 'children' of data
+        node.state    = data.state                   if 'state'    of data
+        node.children = nodesFromData(data.children) if 'children' of data
         return node
 
 
@@ -93,14 +146,15 @@ webUi = (($) ->
 
 
     buildAction = (key, value, separator) ->
-        action = {action : (node) -> method_.executeAction(key, node)}
+        a = {}
         if typeof value is 'string'
-            action['label'] = value
+            a.label = value
         else
-            action['label'] = value.text or throw "Missing text for action #{k}"
-            action['icon' ] = value.icon if 'icon' of value
-        action['separator_before'] = true if separator
-        return action
+            a.label = value.text or throw "Missing text for action #{k}"
+            a.icon  = value.icon if 'icon' of value
+        a.separator_before = true if separator
+        a.action           = (node) -> executeAction(a.label, key, node)
+        return a
 
     buildMenu = (types, actions) ->
         menus     = {}
@@ -157,8 +211,12 @@ webUi = (($) ->
         .always -> removeMessage($msg)
         .always    handleMessages
 
-)(jQuery)
-
-jQuery(webUi)
-jQuery(-> jQuery('.noscript').remove())
+if jQuery?
+    jQuery(webUi(jQuery))
+    jQuery(-> jQuery('#no-js').remove())
+else
+    window.onload = ->
+        document.getElementById('no-js').innerHTML =
+                'Error: jQuery is missing. This may be because the library could not be
+                 loaded from Google Hosted Libraries.'
 
