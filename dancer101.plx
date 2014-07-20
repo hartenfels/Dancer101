@@ -80,12 +80,14 @@ ajax '/restructure' => sub {
     (my $target, $error) = object_from(param 'target');
     return $error if not $target;
 
-    my $list = $target->list_for($source)
-        or return {type => 'error', text => 'Restructuring Error: Incompatible types.'};
+    return {type => 'error', text => 'Restructuring Error: Incompatible types.'}
+        if not $target->can_adopt($source);
 
-    my $pos; #= param 'pos' // @$list;
-    defined $pos ? splice $list, $pos, 0, $source : push $list, $source;
-    remove(sub { $_[0] == $source }, $server->companies);
+    my $list   = $target->children;
+    my $pos    = param 'pos' // $#$list;
+    my ($rm)   = remove(sub { $_[0] == $source }, $server->companies);
+    my $offset = $rm && $rm->{list} == $list && $pos >= $rm->{index} ? $pos - 1 : $pos;
+    splice $list, $offset, 0, $source;
 
     return {commands => {
         type   => 'move',

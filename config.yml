@@ -6,6 +6,7 @@ log          : debug
 show_errors  : 1
 startup_info : 1
 warnings     : 1
+company_file : companies.yml
 serializer   : JSON
 engines      :
     JSON :

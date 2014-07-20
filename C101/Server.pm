@@ -4,22 +4,24 @@ use Moops;
 
 class Server {
     use Dancer;
+    use Data::Dumper;
     use Data::Structure::Util qw(unbless);
+    use File::Slurp           qw(slurp write_file);
     use JSON::XS              qw(encode_json);
     use Scalar::Util          qw(looks_like_number);
     use Storable              qw(dclone);
     use Template;
     use C101::Operations      qw(remove uuids);
-    use C101::Persistence     qw(serialize unserialize unparse);
+    use C101::Persistence     qw(parse unparse);
     use C101::Sample;
-
 
     has 'companies' => (
         is       => 'ro',
         isa      => 'ArrayRef[C101::Company]',
         required => 1,
         default  => sub {
-            -e 'companies.bin' ? unserialize('companies.bin') : [ C101::Sample::create ]
+            my $path = setting('company_file');
+            -e $path ? parse(scalar slurp($path)) : [C101::Sample::create];
         },
     );
 
@@ -32,7 +34,7 @@ class Server {
 
     method get(Str $id) { $id eq 'root' ? $self->companies : $self->_uuids->{$id} }
 
-    method save()       { serialize($self->companies, 'companies.bin')            }
+    method save()       { write_file setting('company_file'), unparse($self->companies) }
 
     method remove(C101::Model $obj) {
         delete $self->_uuids->{$obj->uuid};

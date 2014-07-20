@@ -56,7 +56,7 @@ class Model {
         &{$visitor->$end}($visitor, $self, $parent, $index);
     }
 
-    method list_for(C101::Model $child) {
+    method can_adopt(C101::Model $child) {
         my $t = $child->type_name;
         if      ($t eq 'department') {
             return $self->does('C101::Departments');
@@ -66,14 +66,12 @@ class Model {
         return 0;
     }
 
-    method json_properties() {(
+    method TO_JSON {{
         type     => $self->type_name,
         id       => $self->uuid,
         text     => $self->name,
         children => $self->children,
-    )}
-
-    method TO_JSON { $self->json_properties }
+    }}
 }
 
 
@@ -105,13 +103,13 @@ class Employee   extends Model types Types101 {
 
     method type_name { 'employee' }
 
-    method json_properties {(
+    method TO_JSON {{
         type    => $self->type_name,
         id      => $self->uuid,
         text    => $self->name,
         address => $self->address,
         salary  => $self->salary,
-    )}
+    }}
 }
 
 __END__

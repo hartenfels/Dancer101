@@ -56,9 +56,13 @@ sub median {
 sub remove {
     my ($should_remove, $list) = @_;
 
+    my @removed;
     my $callback = sub {
         my (undef, $thing, $list, $index) = @_;
-        splice($list, $$index--, 1) if &$should_remove($thing);
+        if (&$should_remove($thing)) {
+            push @removed, {list => $list, index => $$index};
+            splice($list, $$index--, 1);
+        }
     };
 
     my $visitor = C101::Visitor->new({
@@ -70,6 +74,7 @@ sub remove {
     for (my $i = 0; $i < @$list; ++$i) {
         $list->[$i]->visit($visitor, $list, \$i);
     }
+    return wantarray ? @removed : \@removed;
 }
 
 sub total {
