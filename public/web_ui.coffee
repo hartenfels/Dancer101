@@ -28,11 +28,12 @@ webUi = ($) ->
             .always -> removeMessage($msg)
             .always    handleMessages
 
-        executeAction : ($msg, key, id, targetId) ->
+        executeAction : ($msg, key, id, target, pos) ->
             action =
                 type : key
                 id   : id
-            action.target = targetId if targetId?
+            action.target = target if target?
+            action.pos    = pos    if pos?
             url = method_.action_urls[key] or throw "ajax: no URL for action #{key}."
             $.post(url, action)
             .done (data)    -> handleCommands(data)
@@ -96,8 +97,47 @@ webUi = ($) ->
         return
 
 
-    handleCommand = (com) ->
-        console.debug com
+    commandHandlers =
+        add  : (command) ->
+            $tree      = $('#tree').jstree()
+            return
+
+        edit : (command) ->
+            $tree      = $('#tree').jstree()
+            cmdNode    = command.node       or throw 'Missing node.'
+            id         = cmdNode.id         or throw 'Missing ID.'
+            node       = $tree.get_node(id) or throw "#{id} does not exist."
+            cmdNode[k] = v unless k of cmdNode for k, v of node
+            edit       = nodeFromData(cmdNode)
+            node[k]    = v for k, v of edit
+            return
+
+        move : (command) ->
+            $tree  = $('#tree').jstree()
+            sid    = command.source         or throw 'Missing source ID.'
+            tid    = command.target         or throw 'Missing target ID.'
+            source = $tree.get_node(sid)    or throw "Source #{sid} does not exist."
+            target = $tree.get_node(tid)    or throw "Target #{tid} does not exist."
+            pos    = command.pos || 'last'
+            $tree.settings.core.check_callback = true
+            $tree.move_node(source, target, pos)
+            $tree.settings.core.check_callback = handleDrag
+            return
+
+        delete : (command) ->
+            id = command.id                     or throw 'Missing ID.'
+            $('#tree').jstree().delete_node(id) or throw "#{id} does not exist."
+            return
+
+    handleCommand = (command) ->
+        type = ''
+        try
+            throw 'Missing type.'         unless 'type' of command
+            type = command.type           or throw 'Empty type.'
+            throw "Unknown type: #{type}" unless  type  of commandHandlers
+            commandHandlers[type](command)
+        catch e
+            notice("Error handling #{type} command: #{e}", 'error')
 
 
     handleCommands = (data) ->
@@ -105,23 +145,24 @@ webUi = ($) ->
             if $.isArray(commands)
             then handleCommand(com) for com in commands
             else handleCommand(commands)
-        return
+        $('#tree').jstree().redraw(true)
 
 
-    handleDrag = (op, node, parent) ->
+    handleDrag = (op, node, parent, pos) ->
         if op is 'move_node'
             ts = types_[parent.type]
             if ts && ts.children && node.type in ts.children
                 $msg = addMessage("Restructuring...", 'load')
                 try
-                    method_.executeAction($msg, 'restructure', node.id, parent.id)
+                    method_.executeAction($msg, 'restructure', node.id, parent.id, pos)
                 catch e
                     removeMessage($msg)
                     notice(e, 'error')
             else
                 notice("Restructuring Error: #{node.type} can't
                         be child of #{parent.type}.", 'error')
-        return false
+            return false
+        return true
 
 
     nodeFromData = (data) ->
@@ -167,7 +208,7 @@ webUi = ($) ->
                     menus[t][a] = buildAction(a, actions[a], separator)
                     separator   = false
                 else
-                    separator = true
+                    separator   = true
         return (node) -> menus[node.type]
 
     ### init()

@@ -5,11 +5,11 @@ use C101::Model;
 
 sub create {
     C101::Company->new({
-        name        => 'ACME Corporation',
-        departments => [
+        name     => 'ACME Corporation',
+        children => [
             C101::Department->new({
-                name      => 'Research',
-                employees => [
+                name     => 'Research',
+                children => [
                     C101::Employee->new({
                         name    => 'Craig',
                         address => 'Redmond',
@@ -28,28 +28,24 @@ sub create {
                 ],
             }),
             C101::Department->new({
-                name      => 'Development',
-                employees => [
+                name     => 'Development',
+                children => [
                     C101::Employee->new({
                         name    => 'Ray',
                         address => 'Redmond',
                         salary  => 234567,
                     }),
-                ],
-                departments => [
                     C101::Department->new({
-                        name      => 'Dev1',
-                        employees => [
+                        name     => 'Dev1',
+                        children => [
                             C101::Employee->new({
                                 name    => 'Klaus',
                                 address => 'Boston',
                                 salary  => 23456,
                             }),
-                        ],
-                        departments => [
                             C101::Department->new({
-                                name      => 'Dev1.1',
-                                employees => [
+                                name     => 'Dev1.1',
+                                children => [
                                     C101::Employee->new({
                                         name    => 'Karl',
                                         address => 'Riga',

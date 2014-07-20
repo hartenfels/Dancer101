@@ -4,7 +4,7 @@
     __indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
 
   webUi = function($) {
-    var addMessage, ajax, buildAction, buildMenu, executeAction, handleCommand, handleCommands, handleDrag, handleMessage, handleMessages, init, menu_, method_, nodeFromData, nodesFromData, notice, removeMessage, types_;
+    var addMessage, ajax, buildAction, buildMenu, commandHandlers, executeAction, handleCommand, handleCommands, handleDrag, handleMessage, handleMessages, init, menu_, method_, nodeFromData, nodesFromData, notice, removeMessage, types_;
     types_ = method_ = menu_ = void 0;
     ajax = {
       buildTree: function() {
@@ -41,14 +41,17 @@
           return removeMessage($msg);
         }).always(handleMessages);
       },
-      executeAction: function($msg, key, id, targetId) {
+      executeAction: function($msg, key, id, target, pos) {
         var action, url;
         action = {
           type: key,
           id: id
         };
-        if (targetId != null) {
-          action.target = targetId;
+        if (target != null) {
+          action.target = target;
+        }
+        if (pos != null) {
+          action.pos = pos;
         }
         url = method_.action_urls[key] || (function() {
           throw "ajax: no URL for action " + key + ".";
@@ -140,8 +143,88 @@
         }
       }
     };
-    handleCommand = function(com) {
-      return console.debug(com);
+    commandHandlers = {
+      add: function(command) {
+        var $tree;
+        $tree = $('#tree').jstree();
+      },
+      edit: function(command) {
+        var $tree, cmdNode, edit, id, k, node, v;
+        $tree = $('#tree').jstree();
+        cmdNode = command.node || (function() {
+          throw 'Missing node.';
+        })();
+        id = cmdNode.id || (function() {
+          throw 'Missing ID.';
+        })();
+        node = $tree.get_node(id) || (function() {
+          throw "" + id + " does not exist.";
+        })();
+        if (!(function() {
+          var _results;
+          _results = [];
+          for (k in node) {
+            v = node[k];
+            _results.push(k in cmdNode);
+          }
+          return _results;
+        })()) {
+          cmdNode[k] = v;
+        }
+        edit = nodeFromData(cmdNode);
+        for (k in edit) {
+          v = edit[k];
+          node[k] = v;
+        }
+      },
+      move: function(command) {
+        var $tree, pos, sid, source, target, tid;
+        $tree = $('#tree').jstree();
+        sid = command.source || (function() {
+          throw 'Missing source ID.';
+        })();
+        tid = command.target || (function() {
+          throw 'Missing target ID.';
+        })();
+        source = $tree.get_node(sid) || (function() {
+          throw "Source " + sid + " does not exist.";
+        })();
+        target = $tree.get_node(tid) || (function() {
+          throw "Target " + tid + " does not exist.";
+        })();
+        pos = command.pos || 'last';
+        $tree.settings.core.check_callback = true;
+        $tree.move_node(source, target, pos);
+        $tree.settings.core.check_callback = handleDrag;
+      },
+      "delete": function(command) {
+        var id;
+        id = command.id || (function() {
+          throw 'Missing ID.';
+        })();
+        $('#tree').jstree().delete_node(id) || (function() {
+          throw "" + id + " does not exist.";
+        })();
+      }
+    };
+    handleCommand = function(command) {
+      var e, type;
+      type = '';
+      try {
+        if (!('type' in command)) {
+          throw 'Missing type.';
+        }
+        type = command.type || (function() {
+          throw 'Empty type.';
+        })();
+        if (!(type in commandHandlers)) {
+          throw "Unknown type: " + type;
+        }
+        return commandHandlers[type](command);
+      } catch (_error) {
+        e = _error;
+        return notice("Error handling " + type + " command: " + e, 'error');
+      }
     };
     handleCommands = function(data) {
       var com, commands, _i, _len;
@@ -155,15 +238,16 @@
           handleCommand(commands);
         }
       }
+      return $('#tree').jstree().redraw(true);
     };
-    handleDrag = function(op, node, parent) {
+    handleDrag = function(op, node, parent, pos) {
       var $msg, e, ts, _ref;
       if (op === 'move_node') {
         ts = types_[parent.type];
         if (ts && ts.children && (_ref = node.type, __indexOf.call(ts.children, _ref) >= 0)) {
           $msg = addMessage("Restructuring...", 'load');
           try {
-            method_.executeAction($msg, 'restructure', node.id, parent.id);
+            method_.executeAction($msg, 'restructure', node.id, parent.id, pos);
           } catch (_error) {
             e = _error;
             removeMessage($msg);
@@ -172,8 +256,9 @@
         } else {
           notice("Restructuring Error: " + node.type + " can't be child of " + parent.type + ".", 'error');
         }
+        return false;
       }
-      return false;
+      return true;
     };
     nodeFromData = function(data) {
       var arg, args, formatted, i, node, type, _i, _len, _ref;

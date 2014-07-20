@@ -1,0 +1,13 @@
+session      : Simple
+template     : template_toolkit
+layout       : main
+logger       : console
+log          : debug
+show_errors  : 1
+startup_info : 1
+warnings     : 1
+serializer   : JSON
+engines      :
+    JSON :
+        allow_blessed   : 1
+        convert_blessed : 1

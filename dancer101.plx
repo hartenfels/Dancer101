@@ -5,87 +5,15 @@ use feature              qw(say switch);
 use Dancer;
 use Dancer::Plugin::Ajax;
 use Data::Dumper;
-use C101::Operations     qw(cut median total);
+use YAML;
+use C101::Operations     qw(cut depth median total remove);
 use C101::Server;
 
-set(
-    session      => 'Simple',
-    template     => 'template_toolkit',
-    layout       => 'main',
-    logger       => 'console',
-    log          => 'debug',
-    show_errors  => 1,
-    startup_info => 1,
-    warnings     => 1,
-    serializer   => 'JSON',
-    engines      => {
-        JSON => {
-            allow_blessed   => 1,
-            convert_blessed => 1,
-        },
-    },
-);
-
-sub make_config {
-    my @add    = ('company');
-    my @ops    = (0, 'cut', 'depth', 'median', 'total');
-    my @mod    = (0, 'edit', 'delete');
-    my $config = {
-        method  => {
-            name        => 'ajax',
-            tree_url    => '/tree',
-            action_urls => {
-                restructure => '/restructure',
-            },
-        },
-        types   => {
-            root       => {
-                icon     => '/plus.png',
-                actions  => [@add, @ops],
-                children => ['company'],
-            },
-            company    => {
-                icon     => '/comp_icon.png',
-                actions  => [@add, 'department', @ops, @mod],
-                children => ['department'],
-            },
-            department => {
-                icon    => '/dept_icon.png',
-                actions => [@add, 'employee', 'department', @ops, @mod],
-                children => ['department', 'employee'],
-            },
-            employee   => {
-                icon     => '/empl_icon.png',
-                actions  => [@add, @ops, @mod],
-                printf   => {
-                    format => '%s, %s, $%.2f',
-                    args   => ['text', 'address', 'salary'],
-                },
-            },
-        },
-        actions => {
-            company    => {text => 'Create Company', icon => '/comp_add.png'},
-            department => {text => 'Add Department', icon => '/dept_add.png'},
-            employee   => {text => 'Add Employee',   icon => '/empl_add.png'},
-            cut        => 'Cut',
-            depth      => 'Depth',
-            median     => 'Median',
-            total      => 'Total',
-            edit       => 'Edit',
-            delete     => 'Delete',
-        },
-    };
-    while (my ($k, $v) = each $config->{actions}) {
-        $config->{method}{action_urls}{$k} = $v;
-    }
-    return $config;
-}
-
 my $server = C101::Server->new;
-my $config = make_config;
+my $config = YAML::LoadFile('web_ui.yml');
 
 ajax '/' => sub {
-    my $type = param('type');
+    my $type = param 'type';
     if ($type eq 'config') {
         return $config;
     } else {
@@ -100,10 +28,72 @@ ajax '/' => sub {
 
 ajax '/tree' => sub {{
     type     => 'root',
+    id       => 'root',
     text     => 'Companies',
     state    => {'opened' => 1},
     children => $server->companies,
 }};
+
+
+sub object_from {
+    my $id  = shift
+        or return (0, {type => 'error', text => 'No ID given.'       });
+    my $obj = $server->get($id)
+        or return (0, {type => 'error', text => "$id does not exist."});
+    return $obj;
+}
+
+sub op {
+    my ($obj,   $error   ) = object_from(param 'id');
+    return $error if not $obj;
+    my ($title, $callback) = @_;
+    return {messages => "$title: " . &$callback(ref $obj eq 'ARRAY' ? @$obj : $obj)};
+}
+
+ajax '/depth'  => sub { op('Depth',  \&depth ) };
+ajax '/median' => sub { op('Median', \&median) };
+ajax '/total'  => sub { op('Total',  \&total ) };
+
+ajax '/cut' => sub {
+    my ($obj, $error) = object_from(param 'id');
+    return $error if not $obj;
+    my @commands;
+    push @commands, {type => 'edit', node => $_} for cut(ref $obj eq 'ARRAY' ? @$obj : $obj);
+    return {commands => \@commands};
+};
+
+ajax '/edit' => sub {
+    {message => {type => 'error', text => 'This operation is not supported yet.'}};
+};
+
+ajax '/delete' => sub {
+    my ($obj, $error) = object_from(param 'id');
+    return $error if not $obj;
+    return {type => 'error', text => "Cannot delete root."} if ref $obj eq 'ARRAY';
+    $server->remove($obj);
+    return {commands => {type => 'delete', id => $obj->uuid}};
+};
+
+ajax '/restructure' => sub {
+    my ($source, $error) = object_from(param 'id');
+    return $error if not $source;
+    (my $target, $error) = object_from(param 'target');
+    return $error if not $target;
+
+    my $list = $target->list_for($source)
+        or return {type => 'error', text => 'Restructuring Error: Incompatible types.'};
+
+    my $pos; #= param 'pos' // @$list;
+    defined $pos ? splice $list, $pos, 0, $source : push $list, $source;
+    remove(sub { $_[0] == $source }, $server->companies);
+
+    return {commands => {
+        type   => 'move',
+        source => $source->uuid,
+        target => $target->uuid,
+        pos    => $pos,
+    }};
+};
 
 get '/' => sub { send_file '/web_ui.html' };
 

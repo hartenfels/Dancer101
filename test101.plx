@@ -6,7 +6,7 @@ use File::Slurp       qw(slurp);
 use Test::More        tests => 8;
 use C101::Sample;
 use C101::Operations  qw(cut depth median total uuids);
-use C101::Persistence qw(serialize unserialize unparse);
+use C101::Persistence qw(serialize unserialize parse unparse);
 
 my $c1 = C101::Sample::create;
 eval { uuids($c1) };
@@ -25,11 +25,7 @@ cut($c2);
 cmp_ok(total($c2), '==', 199873.5, 'cut');
 
 serialize($c1, 'serialized.bin');
-is_deeply(unserialize('serialized.bin'), $c1, 'serialization');
+is_deeply(unserialize('serialized.bin'), $c1, 'serialize/unserialize');
 
-my $json = unparse($c1);
-# Need to remove UUIDs and trailing commas to do simple string compare
-$json =~ s/\s*"uuid"\s*:.*//g;
-$json =~ s/,(\n\s*(}|]))/$1/gm;
-is($json, slurp('sample.json'), 'unparsing');
+is_deeply(parse(unparse($c1)), $c1, 'parsing/unparsing');
 

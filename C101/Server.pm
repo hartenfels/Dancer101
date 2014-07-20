@@ -28,9 +28,16 @@ class Server {
         isa      => 'HashRef[C101::Model]',
     );
 
-    method BUILD { $self->_uuids(uuids(@{$self->companies})) }
+    method BUILD        { $self->_uuids(uuids(@{$self->companies}))               }
 
-    method save() { serialize($self->companies, 'companies.bin') }
+    method get(Str $id) { $id eq 'root' ? $self->companies : $self->_uuids->{$id} }
+
+    method save()       { serialize($self->companies, 'companies.bin')            }
+
+    method remove(C101::Model $obj) {
+        delete $self->_uuids->{$obj->uuid};
+        remove(sub { $_[0] == $obj }, $self->companies);
+    }
 
 
     method _uuid(Str $key, $value?) {

@@ -1,35 +1,18 @@
 package C101::Persistence;
 use strict;
 use warnings;
-use Data::Structure::Util qw(unbless);
 use Exporter;
-use JSON::XS;
-use Storable              qw(store retrieve dclone);
+use Storable qw(store retrieve);
+use YAML;
 
 use vars qw(@ISA @EXPORT_OK);
 @ISA       = ('Exporter');
-@EXPORT_OK = qw(serialize unserialize plainify unparse);
+@EXPORT_OK = qw(serialize unserialize parse unparse);
 
-sub serialize   {    store(@_) }
-
-sub unserialize { retrieve(@_) }
-
-sub plainify {
-    my $list = [];
-    push($list, unbless(dclone($_))) for @_;
-    return $list;
-}
-
-sub unparse {
-    JSON::XS->new->utf8->canonical->indent->space_after->encode(plainify(@_));
-}
-
-# private
-sub _has_keys {
-    my $hash = shift;
-    for (@_) { return 0 unless exists($hash->{$_}) }
-    return 1;
-}
+sub serialize   {      store(@_) }
+sub unserialize {   retrieve(@_) }
+sub parse       { YAML::Load(@_) }
+sub unparse     { YAML::Dump(@_) }
 
 1;
 __END__

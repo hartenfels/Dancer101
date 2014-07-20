@@ -11,13 +11,18 @@ use vars qw(@ISA @EXPORT_OK);
 
 
 sub cut {
+    my @cut;
     my $visitor = C101::Visitor->new({
         begin_employee => sub {
             my $e = $_[1];
-            $e->salary($e->salary / 2) if $e->salary;
+            if ($e->salary) {
+                $e->salary($e->salary / 2);
+                push @cut, $e;
+            }
         },
     });
     $_->visit($visitor) for @_;
+    return wantarray ? @cut : \@cut;
 }
 
 sub depth {
@@ -105,7 +110,7 @@ of zero or more Companies, Departments and Employees (or a mix of them).
 =head3 cut(Company|Department|Employee, ...)
 
 Implements Feature:Cut. Halves all employees' salaries, salaries of 0 are left alone.
-Nothing is returned.
+Returns a list in list context and a list reference in scalar context.
 
 =head3 depth(Company|Department|Employee, ...)
 

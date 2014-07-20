@@ -23,6 +23,13 @@ class Model {
         default  => \&_create_uuid,
     );
 
+    has 'children' => (
+        is       => 'rw',
+        isa      => 'ArrayRef[C101::Model]',
+        required => 1,
+        default  => sub { [] },
+    );
+
     method renew_uuid {
         my $old  = $self->uuid;
         $self->uuid(_create_uuid());
@@ -41,55 +48,38 @@ class Model {
 
         &{$visitor->$begin}($visitor, $self, $parent, $index);
 
-        if ($self->does('C101::Employees')) {
-            my $empls = $self->employees;
-            for (my $i = 0; $i < @$empls; ++$i) {
-                $empls->[$i]->visit($visitor, $empls, \$i);
-            }
-        }
-
-        if ($self->does('C101::Departments')) {
-            my $depts = $self->departments;
-            for (my $i = 0; $i < @$depts; ++$i) {
-                $depts->[$i]->visit($visitor, $depts, \$i);
-            }
+        my $children = $self->children;
+        for (my $i = 0; $i < @$children; ++$i) {
+            $children->[$i]->visit($visitor, $children, \$i);
         }
 
         &{$visitor->$end}($visitor, $self, $parent, $index);
     }
 
+    method list_for(C101::Model $child) {
+        my $t = $child->type_name;
+        if      ($t eq 'department') {
+            return $self->does('C101::Departments');
+        } elsif ($t eq 'employee'  ) {
+            return $self->does('C101::Employees'  );
+        }
+        return 0;
+    }
+
     method json_properties() {(
-        type => $self->type_name,
-        id   => $self->uuid,
-        text => $self->name,
+        type     => $self->type_name,
+        id       => $self->uuid,
+        text     => $self->name,
+        children => $self->children,
     )}
 
-    method TO_JSON {
-        my $h = {$self->json_properties};
-        push @{$h->{children}}, @{$self->employees  } if $self->does('C101::Employees'  );
-        push @{$h->{children}}, @{$self->departments} if $self->does('C101::Departments');
-        return $h;
-    }
+    method TO_JSON { $self->json_properties }
 }
 
 
-role Departments {
-    has 'departments' => (
-        is       => 'rw',
-        isa      => 'ArrayRef[C101::Department]',
-        required => 1,
-        default  => sub { [] },
-    );
-}
+role Departments {}
 
-role Employees {
-    has 'employees' => (
-        is       => 'rw',
-        isa      => 'ArrayRef[C101::Employee]',
-        required => 1,
-        default  => sub { [] },
-    );
-}
+role Employees   {}
 
 
 class Company    extends Model with Departments {
