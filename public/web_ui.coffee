@@ -5,7 +5,7 @@ webUi = ($) ->
 
 
     ajax =
-        buildTree : () ->
+        buildTree : ->
             $msg = addMessage('Getting tree...', 'load')
             $.get(method_.tree_url, {type : 'tree'})
             .done (data) ->
@@ -40,6 +40,14 @@ webUi = ($) ->
             .fail (_, s, e) -> notice("#{s}: #{e}", 'error')
             .always         -> removeMessage($msg)
             .always            handleMessages
+
+        getFormBase : (command) ->
+            # FIXME
+            url = command.submit or throw 'ajax: No form URL.'
+            $('<form></form>').attr('url', url)
+                              .submit((event) ->
+
+            )
 
 
     executeAction = (label, key, node) ->
@@ -127,6 +135,36 @@ webUi = ($) ->
         delete : (command) ->
             id = command.id                     or throw 'Missing ID.'
             $('#tree').jstree().delete_node(id) or throw "#{id} does not exist."
+            return
+
+        form : (command) ->
+            title = command.title || 'form'
+            $form = method_.getFormBase(command).attr('title', title)
+
+            for field in command.fields
+                $div = $('<div></div>').appendTo($form)
+                $('<label></label>').attr('for', field.name)
+                                    .text(field.label || field.name)
+                                    .appendTo($div)
+                $('<input>').attr('name', field.name or throw 'Missing name.')
+                            .val(field.value || '')
+                            .appendTo($div)
+                if field.error
+                    $('<div></div>').addClass('field-message')
+                                    .text(field.error)
+                                    .appendTo($div)
+                    $div.addClass('field-error')
+
+            $form.submit (event) ->
+                      $msg  = addMessage("Submitting #{title}...", 'load')
+                      event.preventDefault()
+                 .dialog
+                      buttons :
+                          Submit : -> $form.submit()
+                          Cancel : -> $form.dialog('close')
+                      close   : -> $form.remove()
+                      show    : 'slideDown'
+                      hide    : 'slideUp'
             return
 
     handleCommand = (command) ->

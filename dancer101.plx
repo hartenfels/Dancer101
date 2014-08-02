@@ -89,18 +89,35 @@ ajax '/restructure' => sub {
     my $offset = $rm && $rm->{list} == $list && $pos >= $rm->{index} ? $pos - 1 : $pos;
     splice $list, $offset, 0, $source;
 
-    return {commands => {
-        type   => 'move',
-        source => $source->uuid,
-        target => $target->uuid,
-        pos    => $pos,
-    }};
+    return {
+        commands => {
+            type   => 'move',
+            source => $source->uuid,
+            target => $target->uuid,
+            pos    => $pos,
+        }
+    };
+};
+
+ajax '/company' => sub {{
+    commands => {
+        type   => 'form',
+        title  => 'Create Company',
+        submit => '/create_company',
+        fields => [
+            {name => 'name', label => 'Name'},
+        ],
+    },
+}};
+
+ajax '/create_company' => sub {
+    {message => 'create company: ' . param 'name'},
 };
 
 get '/' => sub { send_file '/web_ui.html' };
 
 
-# Exit gracefully so that all destructors will be called.
+# Exit gracefully on interrupt
 $SIG{INT} = sub {
     $server->save;
     exit;

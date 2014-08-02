@@ -63,6 +63,13 @@
         }).always(function() {
           return removeMessage($msg);
         }).always(handleMessages);
+      },
+      getFormBase: function(command) {
+        var url;
+        url = command.submit || (function() {
+          throw 'ajax: No form URL.';
+        })();
+        return $('<form></form>').attr('url', url).submit(function(event) {});
       }
     };
     executeAction = function(label, key, node) {
@@ -205,6 +212,43 @@
         $('#tree').jstree().delete_node(id) || (function() {
           throw "" + id + " does not exist.";
         })();
+      },
+      form: function(command) {
+        var $div, $form, field, title, _i, _len, _ref;
+        title = command.title || 'form';
+        $form = method_.getFormBase(command).attr('title', title);
+        _ref = command.fields;
+        for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+          field = _ref[_i];
+          $div = $('<div></div>').appendTo($form);
+          $('<label></label>').attr('for', field.name).text(field.label || field.name).appendTo($div);
+          $('<input>').attr('name', field.name || (function() {
+            throw 'Missing name.';
+          })()).val(field.value || '').appendTo($div);
+          if (field.error) {
+            $('<div></div>').addClass('field-message').text(field.error).appendTo($div);
+            $div.addClass('field-error');
+          }
+        }
+        $form.submit(function(event) {
+          var $msg;
+          $msg = addMessage("Submitting " + title + "...", 'load');
+          return event.preventDefault();
+        }).dialog({
+          buttons: {
+            Submit: function() {
+              return $form.submit();
+            },
+            Cancel: function() {
+              return $form.dialog('close');
+            }
+          },
+          close: function() {
+            return $form.remove();
+          },
+          show: 'slideDown',
+          hide: 'slideUp'
+        });
       }
     };
     handleCommand = function(command) {
