@@ -1,6 +1,5 @@
 webUi = ($) ->
-    # These should probably be @types and @urls, but that don't work. I assume because I
-    # just don't get how ``this'' works in JavaScript. So trailing underscores it is.
+    # These should probably be @types and @urls, but that don't work.
     types_ = method_ = menu_ = undefined
 
 
@@ -10,7 +9,8 @@ webUi = ($) ->
             $.get(method_.tree_url, {type : 'tree'})
             .done (data) ->
                 try
-                    nodes = nodesFromData(if $.isArray(data) then data else [data])
+                    data  = [data] if not $.isArray(data)
+                    nodes = nodesFromData(data)
                     $('#tree').jstree
                         core        :
                             data           : nodes
@@ -20,11 +20,16 @@ webUi = ($) ->
                         dnd         :
                             check_while_dragging : false
                             copy                 : false
-                        plugins     : ['contextmenu', 'dnd', 'types', 'wholerow']
+                        plugins     : [
+                            'contextmenu'
+                            'dnd'
+                            'types'
+                            'wholerow'
+                            ]
                         types       : types_
                 catch e
                     addMessage("Fatal Error: #{e}", 'error')
-            .fail   -> addMessage('Fatal Error: Could not get tree from server.', 'error')
+            .fail   -> addMessage('Fatal Error: Could not get tree.', 'error')
             .always -> removeMessage($msg)
             .always    handleMessages
 
@@ -34,7 +39,8 @@ webUi = ($) ->
                 id   : id
             action.target = target if target?
             action.pos    = pos    if pos?
-            url = method_.action_urls[key] or throw "ajax: no URL for action #{key}."
+            url = method_.action_urls[key] or
+                throw "ajax: no URL for action #{key}."
             $.post(url, action)
             .done (data)    -> handleCommands(data)
             .fail (_, s, e) -> notice("#{s}: #{e}", 'error')
@@ -43,17 +49,23 @@ webUi = ($) ->
 
         getFormBase : (command) ->
             # FIXME
-            url = command.submit or throw 'ajax: No form URL.'
-            $('<form></form>').attr('url', url)
-                              .submit((event) ->
-
-            )
-
+            url   = command.submit or throw 'ajax: No form URL.'
+            $form = $('<form></form>')
+            $form.submit (event) ->
+                event.preventDefault()
+                $msg = addMessage("Submitting #{command.title || 'form'}...",
+                                  'load')
+                $.post(url, $form.serialize())
+                .done (data)    -> handleCommands(data)
+                .done (data)    -> handleForm($form, data)
+                .fail (_, s, e) -> notice("#{s}: #{e}", 'error')
+                .always         -> removeMessage($msg)
+                .always            handleMessages
 
     executeAction = (label, key, node) ->
         $msg = addMessage("Executing #{label}...", 'load')
         try
-            id  = $('#tree').jstree().get_node(node.reference).id
+            id = $('#tree').jstree().get_node(node.reference).id
             method_.executeAction($msg, key, id)
         catch e
             removeMessage($msg)
@@ -62,8 +74,8 @@ webUi = ($) ->
 
 
     ### addMessage(Str text, Str classes?)
-    Shows a message with the given text. Additional CSS classes may be given as a
-    space-separated string. Returns the message's $div. ###
+    Shows a message with the given text. Additional CSS classes may be given as
+    a space-separated string. Returns the message's $div. ###
     addMessage = (text, classes) ->
         $div = $('<div class="message"></div>').text(text).hide()
         $div.addClass(classes) if classes
@@ -71,15 +83,15 @@ webUi = ($) ->
 
 
     ### removeMessage($div)
-    Hides and removes the given message. Returns the $div to be removed after it gets done
-    sliding up, whatever good that'll do ya. You should probably just leave it alone. ###
+    Hides and removes the given message. Returns the $div to be removed after
+    it gets done sliding up, whatever good that'll do ya. ###
     removeMessage = ($div) ->
         $div.slideUp({complete : -> $div.remove()})
 
 
     ### notice(Str text, Str classes?)
-    Dispatches to addMessage, waits five seconds and then calls removeMessage. Happens to
-    return the timeout ID of the five-second wait. ###
+    Dispatches to addMessage, waits five seconds and then calls removeMessage.
+    Happens to return the timeout ID of the five-second wait. ###
     notice = (text, classes) ->
         $div = addMessage(text, classes)
         setTimeout((-> removeMessage($div)), 5000)
@@ -95,8 +107,9 @@ webUi = ($) ->
 
 
     ### handleMessages({Object|[Object] :messages} data)
-    Defers to handleMessage for each message in the given data, if that object has a
-    ``messages'' property. It may either be a single message or an array of them. ###
+    Defers to handleMessage for each message in the given data, if that object
+    has a ``messages'' property. It may either be a single message or an array
+    of them. ###
     handleMessages = (data) ->
         if data && 'messages' of data && messages = data.messages
             if   $.isArray(messages)
@@ -107,7 +120,11 @@ webUi = ($) ->
 
     commandHandlers =
         add  : (command) ->
-            $tree      = $('#tree').jstree()
+            $tree  = $('#tree').jstree()
+            id     = command.parent     or throw 'Missing parent ID.'
+            parent = $tree.get_node(id) or throw "#{id} does not exist."
+            node   = command.node       or throw 'Missing node.'
+            $tree.create_node(parent, nodeFromData(node))
             return
 
         edit : (command) ->
@@ -124,8 +141,8 @@ webUi = ($) ->
             $tree  = $('#tree').jstree()
             sid    = command.source         or throw 'Missing source ID.'
             tid    = command.target         or throw 'Missing target ID.'
-            source = $tree.get_node(sid)    or throw "Source #{sid} does not exist."
-            target = $tree.get_node(tid)    or throw "Target #{tid} does not exist."
+            source = $tree.get_node(sid)    or throw "#{sid} does not exist."
+            target = $tree.get_node(tid)    or throw "#{tid} does not exist."
             pos    = command.pos || 'last'
             $tree.settings.core.check_callback = true
             $tree.move_node(source, target, pos)
@@ -142,29 +159,27 @@ webUi = ($) ->
             $form = method_.getFormBase(command).attr('title', title)
 
             for field in command.fields
-                $div = $('<div></div>').appendTo($form)
+                throw 'Missing name.' if not field.name
+                $div = $('<div></div>').attr('name', "#{field.name}")
+                                       .appendTo($form)
                 $('<label></label>').attr('for', field.name)
                                     .text(field.label || field.name)
                                     .appendTo($div)
-                $('<input>').attr('name', field.name or throw 'Missing name.')
+                $('<input>').attr('name', field.name)
                             .val(field.value || '')
                             .appendTo($div)
-                if field.error
-                    $('<div></div>').addClass('field-message')
-                                    .text(field.error)
-                                    .appendTo($div)
-                    $div.addClass('field-error')
+                $('<div></div>').attr('name', "#{field.name}-error")
+                                .addClass('field-message')
+                                .hide()
+                                .appendTo($div)
 
-            $form.submit (event) ->
-                      $msg  = addMessage("Submitting #{title}...", 'load')
-                      event.preventDefault()
-                 .dialog
-                      buttons :
-                          Submit : -> $form.submit()
-                          Cancel : -> $form.dialog('close')
-                      close   : -> $form.remove()
-                      show    : 'slideDown'
-                      hide    : 'slideUp'
+            $form.dialog
+                buttons :
+                    Submit : -> $form.submit()
+                    Cancel : -> $form.dialog('close')
+                close   : -> $form.remove()
+                show    : 'slideDown'
+                hide    : 'slideUp'
             return
 
     handleCommand = (command) ->
@@ -185,6 +200,18 @@ webUi = ($) ->
             else handleCommand(commands)
         $('#tree').jstree().redraw(true)
 
+    handleForm = ($form, data) ->
+        if data && 'form' of data && f = data.form
+            if f.valid
+                $form.dialog('close')
+            else if f.errors
+                $form.find("div[name=#{k}]").removeClass('field-error')
+                     .find('.field-message').slideUp()
+                for k, v of f.errors
+                    $form.find("div[name=#{k}]")
+                         .addClass('field-error')
+                         .find('.field-message')
+                         .text(v).stop().slideUp().slideDown()
 
     handleDrag = (op, node, parent, pos) ->
         if op is 'move_node'
@@ -192,7 +219,8 @@ webUi = ($) ->
             if ts && ts.children && node.type in ts.children
                 $msg = addMessage("Restructuring...", 'load')
                 try
-                    method_.executeAction($msg, 'restructure', node.id, parent.id, pos)
+                    method_.executeAction($msg, 'restructure',
+                                          node.id, parent.id, pos)
                 catch e
                     removeMessage($msg)
                     notice(e, 'error')
@@ -250,9 +278,10 @@ webUi = ($) ->
         return (node) -> menus[node.type]
 
     ### init()
-    Loads the configuration information from the server via AJAX and then does a bunch of
-    ugly error checking. If it's happy with the result, it defers to buildTree. Otherwise
-    it shows a message and the script dies. Then you go fix your broken server code. ###
+    Loads the configuration information from the server via AJAX and then does
+    a bunch of ugly error checking. If it's happy with the result, it defers to
+    buildTree. Otherwise it shows a message and the script dies. Then you go
+    fix your broken server code. ###
     init = ->
         $msg = addMessage('Getting server configuration...', 'load')
         $.get('/', {type : 'config'})
@@ -262,8 +291,10 @@ webUi = ($) ->
 
                 switch method.name
                     when 'ajax'
-                        'tree_url'    of method or errs.push('ajax missing tree_url.'   )
-                        'action_urls' of method or errs.push('ajax missing action_urls.')
+                        'tree_url'    of method or
+                            errs.push('ajax missing tree_url.'   )
+                        'action_urls' of method or
+                            errs.push('ajax missing action_urls.')
                         break if errs.length
                         ajax.tree_url    = method.tree_url
                         ajax.action_urls = method.action_urls
@@ -286,7 +317,7 @@ webUi = ($) ->
                     addMessage("Fatal Error: #{es}", 'error')
                 throw es
             return
-        .fail   -> addMessage('Fatal Error: Could not get server configuration.', 'error')
+        .fail   -> addMessage("Fatal Error: Couldn't get server info", 'error')
         .always -> removeMessage($msg)
         .always    handleMessages
 
@@ -296,6 +327,6 @@ if jQuery?
 else
     window.onload = ->
         document.getElementById('no-js').innerHTML =
-                'Error: jQuery is missing. This may be because the library could not be
-                 loaded from Google Hosted Libraries.'
+                'Error: jQuery is missing. This may be because the library
+                 could not be loaded from Google Hosted Libraries.'
 

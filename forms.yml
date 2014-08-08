@@ -1,0 +1,18 @@
+company    :
+    - name  : name
+      label : Name
+      type  : Str
+department :
+    - name  : name
+      label : Name
+      type  : Str
+employee   :
+    - name  : name
+      label : Name
+      type  : Str
+    - name  : address
+      label : Address
+      type  : Str
+    - name  : salary
+      label : Salary
+      type  : UnsignedNum

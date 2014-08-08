@@ -4,7 +4,7 @@
     __indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
 
   webUi = function($) {
-    var addMessage, ajax, buildAction, buildMenu, commandHandlers, executeAction, handleCommand, handleCommands, handleDrag, handleMessage, handleMessages, init, menu_, method_, nodeFromData, nodesFromData, notice, removeMessage, types_;
+    var addMessage, ajax, buildAction, buildMenu, commandHandlers, executeAction, handleCommand, handleCommands, handleDrag, handleForm, handleMessage, handleMessages, init, menu_, method_, nodeFromData, nodesFromData, notice, removeMessage, types_;
     types_ = method_ = menu_ = void 0;
     ajax = {
       buildTree: function() {
@@ -15,7 +15,10 @@
         }).done(function(data) {
           var e, nodes;
           try {
-            nodes = nodesFromData($.isArray(data) ? data : [data]);
+            if (!$.isArray(data)) {
+              data = [data];
+            }
+            nodes = nodesFromData(data);
             return $('#tree').jstree({
               core: {
                 data: nodes,
@@ -36,7 +39,7 @@
             return addMessage("Fatal Error: " + e, 'error');
           }
         }).fail(function() {
-          return addMessage('Fatal Error: Could not get tree from server.', 'error');
+          return addMessage('Fatal Error: Could not get tree.', 'error');
         }).always(function() {
           return removeMessage($msg);
         }).always(handleMessages);
@@ -65,11 +68,25 @@
         }).always(handleMessages);
       },
       getFormBase: function(command) {
-        var url;
+        var $form, url;
         url = command.submit || (function() {
           throw 'ajax: No form URL.';
         })();
-        return $('<form></form>').attr('url', url).submit(function(event) {});
+        $form = $('<form></form>');
+        return $form.submit(function(event) {
+          var $msg;
+          event.preventDefault();
+          $msg = addMessage("Submitting " + (command.title || 'form') + "...", 'load');
+          return $.post(url, $form.serialize()).done(function(data) {
+            return handleCommands(data);
+          }).done(function(data) {
+            return handleForm($form, data);
+          }).fail(function(_, s, e) {
+            return notice("" + s + ": " + e, 'error');
+          }).always(function() {
+            return removeMessage($msg);
+          }).always(handleMessages);
+        });
       }
     };
     executeAction = function(label, key, node) {
@@ -86,8 +103,8 @@
     };
 
     /* addMessage(Str text, Str classes?)
-    Shows a message with the given text. Additional CSS classes may be given as a
-    space-separated string. Returns the message's $div.
+    Shows a message with the given text. Additional CSS classes may be given as
+    a space-separated string. Returns the message's $div.
      */
     addMessage = function(text, classes) {
       var $div;
@@ -99,8 +116,8 @@
     };
 
     /* removeMessage($div)
-    Hides and removes the given message. Returns the $div to be removed after it gets done
-    sliding up, whatever good that'll do ya. You should probably just leave it alone.
+    Hides and removes the given message. Returns the $div to be removed after
+    it gets done sliding up, whatever good that'll do ya.
      */
     removeMessage = function($div) {
       return $div.slideUp({
@@ -111,8 +128,8 @@
     };
 
     /* notice(Str text, Str classes?)
-    Dispatches to addMessage, waits five seconds and then calls removeMessage. Happens to
-    return the timeout ID of the five-second wait.
+    Dispatches to addMessage, waits five seconds and then calls removeMessage.
+    Happens to return the timeout ID of the five-second wait.
      */
     notice = function(text, classes) {
       var $div;
@@ -134,8 +151,9 @@
     };
 
     /* handleMessages({Object|[Object] :messages} data)
-    Defers to handleMessage for each message in the given data, if that object has a
-    ``messages'' property. It may either be a single message or an array of them.
+    Defers to handleMessage for each message in the given data, if that object
+    has a ``messages'' property. It may either be a single message or an array
+    of them.
      */
     handleMessages = function(data) {
       var messages, msg, _i, _len;
@@ -152,8 +170,18 @@
     };
     commandHandlers = {
       add: function(command) {
-        var $tree;
+        var $tree, id, node, parent;
         $tree = $('#tree').jstree();
+        id = command.parent || (function() {
+          throw 'Missing parent ID.';
+        })();
+        parent = $tree.get_node(id) || (function() {
+          throw "" + id + " does not exist.";
+        })();
+        node = command.node || (function() {
+          throw 'Missing node.';
+        })();
+        $tree.create_node(parent, nodeFromData(node));
       },
       edit: function(command) {
         var $tree, cmdNode, edit, id, k, node, v;
@@ -194,10 +222,10 @@
           throw 'Missing target ID.';
         })();
         source = $tree.get_node(sid) || (function() {
-          throw "Source " + sid + " does not exist.";
+          throw "" + sid + " does not exist.";
         })();
         target = $tree.get_node(tid) || (function() {
-          throw "Target " + tid + " does not exist.";
+          throw "" + tid + " does not exist.";
         })();
         pos = command.pos || 'last';
         $tree.settings.core.check_callback = true;
@@ -220,21 +248,15 @@
         _ref = command.fields;
         for (_i = 0, _len = _ref.length; _i < _len; _i++) {
           field = _ref[_i];
-          $div = $('<div></div>').appendTo($form);
-          $('<label></label>').attr('for', field.name).text(field.label || field.name).appendTo($div);
-          $('<input>').attr('name', field.name || (function() {
+          if (!field.name) {
             throw 'Missing name.';
-          })()).val(field.value || '').appendTo($div);
-          if (field.error) {
-            $('<div></div>').addClass('field-message').text(field.error).appendTo($div);
-            $div.addClass('field-error');
           }
+          $div = $('<div></div>').attr('name', "" + field.name).appendTo($form);
+          $('<label></label>').attr('for', field.name).text(field.label || field.name).appendTo($div);
+          $('<input>').attr('name', field.name).val(field.value || '').appendTo($div);
+          $('<div></div>').attr('name', "" + field.name + "-error").addClass('field-message').hide().appendTo($div);
         }
-        $form.submit(function(event) {
-          var $msg;
-          $msg = addMessage("Submitting " + title + "...", 'load');
-          return event.preventDefault();
-        }).dialog({
+        $form.dialog({
           buttons: {
             Submit: function() {
               return $form.submit();
@@ -283,6 +305,23 @@
         }
       }
       return $('#tree').jstree().redraw(true);
+    };
+    handleForm = function($form, data) {
+      var f, k, v, _ref, _results;
+      if (data && 'form' in data && (f = data.form)) {
+        if (f.valid) {
+          return $form.dialog('close');
+        } else if (f.errors) {
+          $form.find("div[name=" + k + "]").removeClass('field-error').find('.field-message').slideUp();
+          _ref = f.errors;
+          _results = [];
+          for (k in _ref) {
+            v = _ref[k];
+            _results.push($form.find("div[name=" + k + "]").addClass('field-error').find('.field-message').text(v).stop().slideUp().slideDown());
+          }
+          return _results;
+        }
+      }
     };
     handleDrag = function(op, node, parent, pos) {
       var $msg, e, ts, _ref;
@@ -388,9 +427,10 @@
     };
 
     /* init()
-    Loads the configuration information from the server via AJAX and then does a bunch of
-    ugly error checking. If it's happy with the result, it defers to buildTree. Otherwise
-    it shows a message and the script dies. Then you go fix your broken server code.
+    Loads the configuration information from the server via AJAX and then does
+    a bunch of ugly error checking. If it's happy with the result, it defers to
+    buildTree. Otherwise it shows a message and the script dies. Then you go
+    fix your broken server code.
      */
     return init = function() {
       var $msg;
@@ -441,7 +481,7 @@
           throw es;
         }
       }).fail(function() {
-        return addMessage('Fatal Error: Could not get server configuration.', 'error');
+        return addMessage("Fatal Error: Couldn't get server info", 'error');
       }).always(function() {
         return removeMessage($msg);
       }).always(handleMessages);

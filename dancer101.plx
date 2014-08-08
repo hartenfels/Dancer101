@@ -8,9 +8,12 @@ use Data::Dumper;
 use YAML;
 use C101::Operations     qw(cut depth median total remove);
 use C101::Server;
+use C101::Validator;
 
-my $server = C101::Server->new;
-my $config = YAML::LoadFile('web_ui.yml');
+my $server    = C101::Server->new;
+my $forms     = YAML::LoadFile('forms.yml');
+my $validator = C101::Validator->new(forms => $forms);
+my $config    = YAML::LoadFile('web_ui.yml');
 
 ajax '/' => sub {
     my $type = param 'type';
@@ -38,16 +41,18 @@ ajax '/tree' => sub {{
 sub object_from {
     my $id  = shift
         or return (0, {type => 'error', text => 'No ID given.'       });
-    my $obj = $server->get($id)
+    my $o = $server->get($id)
         or return (0, {type => 'error', text => "$id does not exist."});
-    return $obj;
+    return $o;
 }
 
 sub op {
-    my ($obj,   $error   ) = object_from(param 'id');
-    return $error if not $obj;
+    my ($o,     $error   ) = object_from(param 'id');
+    return $error if not $o;
     my ($title, $callback) = @_;
-    return {messages => "$title: " . &$callback(ref $obj eq 'ARRAY' ? @$obj : $obj)};
+    return {
+        messages => "$title: " . $callback->(ref $o eq 'ARRAY' ? @$o : $o),
+    };
 }
 
 ajax '/depth'  => sub { op('Depth',  \&depth ) };
@@ -55,10 +60,12 @@ ajax '/median' => sub { op('Median', \&median) };
 ajax '/total'  => sub { op('Total',  \&total ) };
 
 ajax '/cut' => sub {
-    my ($obj, $error) = object_from(param 'id');
-    return $error if not $obj;
+    my ($o, $error) = object_from(param 'id');
+    return $error if not $o;
     my @commands;
-    push @commands, {type => 'edit', node => $_} for cut(ref $obj eq 'ARRAY' ? @$obj : $obj);
+    for (cut(ref $o eq 'ARRAY' ? @$o : $o)) {
+        push @commands, {type => 'edit', node => $_}
+    }
     return {commands => \@commands};
 };
 
@@ -67,11 +74,11 @@ ajax '/edit' => sub {
 };
 
 ajax '/delete' => sub {
-    my ($obj, $error) = object_from(param 'id');
-    return $error if not $obj;
-    return {type => 'error', text => "Cannot delete root."} if ref $obj eq 'ARRAY';
-    $server->remove($obj);
-    return {commands => {type => 'delete', id => $obj->uuid}};
+    my ($o, $error) = object_from(param 'id');
+    return $error if not $o;
+    return {type => 'error', text => "Can't delete root."} if ref $o eq 'ARRAY';
+    $server->remove($o);
+    return {commands => {type => 'delete', id => $o->uuid}};
 };
 
 ajax '/restructure' => sub {
@@ -80,13 +87,17 @@ ajax '/restructure' => sub {
     (my $target, $error) = object_from(param 'target');
     return $error if not $target;
 
-    return {type => 'error', text => 'Restructuring Error: Incompatible types.'}
-        if not $target->can_adopt($source);
+    $target->can_adopt($source) or return {
+        type => 'error',
+        text => 'Restructure: Incompatible types.'
+    };
 
     my $list   = $target->children;
     my $pos    = param 'pos' // $#$list;
     my ($rm)   = remove(sub { $_[0] == $source }, $server->companies);
-    my $offset = $rm && $rm->{list} == $list && $pos >= $rm->{index} ? $pos - 1 : $pos;
+    my $offset = $rm && $rm->{list} == $list && $pos >= $rm->{index}
+               ? $pos - 1
+               : $pos;
     splice $list, $offset, 0, $source;
 
     return {
@@ -95,7 +106,7 @@ ajax '/restructure' => sub {
             source => $source->uuid,
             target => $target->uuid,
             pos    => $pos,
-        }
+        },
     };
 };
 
@@ -104,14 +115,30 @@ ajax '/company' => sub {{
         type   => 'form',
         title  => 'Create Company',
         submit => '/create_company',
-        fields => [
-            {name => 'name', label => 'Name'},
-        ],
+        fields => $forms->{company},
     },
 }};
 
 ajax '/create_company' => sub {
-    {message => 'create company: ' . param 'name'},
+    my ($valid, $result) = $validator->validate(company => scalar params);
+    if ($valid) {
+        my $node = C101::Company->new($result);
+        push @{$server->companies}, $node;
+        return {
+            form     => {valid => 1},
+            messages => "Added company $result->{name}.",
+            commands => {
+                type   => 'add',
+                parent => 'root',
+                node   => $node,
+            },
+        };
+    } else {
+        return {
+            form     => {errors => $result},
+            messages => {text => 'Invalid form data.', type => 'error'},
+        };
+    }
 };
 
 get '/' => sub { send_file '/web_ui.html' };
