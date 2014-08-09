@@ -38,11 +38,14 @@ ajax '/tree' => sub {{
 }};
 
 
+sub err {
+    my @err = (messages => [{type => 'error', text => shift}]);
+    return wantarray ? @err : {@err};
+};
+
 sub object_from {
-    my $id  = shift
-        or return (0, {type => 'error', text => 'No ID given.'       });
-    my $o = $server->get($id)
-        or return (0, {type => 'error', text => "$id does not exist."});
+    my $id = shift             or return (0, err('No ID given.'       ));
+    my $o  = $server->get($id) or return (0, err("$id does not exist."));
     return $o;
 }
 
@@ -69,14 +72,10 @@ ajax '/cut' => sub {
     return {commands => \@commands};
 };
 
-ajax '/edit' => sub {
-    {message => {type => 'error', text => 'This operation is not supported yet.'}};
-};
-
 ajax '/delete' => sub {
     my ($o, $error) = object_from(param 'id');
     return $error if not $o;
-    return {type => 'error', text => "Can't delete root."} if ref $o eq 'ARRAY';
+    return err("Can't delete root.") if ref $o eq 'ARRAY';
     $server->remove($o);
     return {commands => {type => 'delete', id => $o->uuid}};
 };
@@ -87,10 +86,8 @@ ajax '/restructure' => sub {
     (my $target, $error) = object_from(param 'target');
     return $error if not $target;
 
-    $target->can_adopt($source) or return {
-        type => 'error',
-        text => 'Restructure: Incompatible types.'
-    };
+    $target->can_adopt($source)
+        or return err('Restructure: Incompatible types.');
 
     my $list   = $target->children;
     my $pos    = param 'pos' // $#$list;
@@ -110,14 +107,89 @@ ajax '/restructure' => sub {
     };
 };
 
-ajax '/company' => sub {{
-    commands => {
-        type   => 'form',
-        title  => 'Create Company',
-        submit => '/create_company',
-        fields => $forms->{company},
-    },
-}};
+
+while (my ($type, $form) = each %$forms) {
+    ajax "/$type" => sub {{
+        commands => {
+            type   => 'form',
+            title  => "Create $form->{label}",
+            submit => "/save/add/$type/${\param 'id'}",
+            fields => $form->{fields},
+        },
+    }};
+}
+
+
+sub field_values {
+    my ($o, $fields) = @_;
+    my @values;
+    for my $f (@$fields) {
+        my $method = $f->{name};
+        push @values, {%$f, value => $o->$method};
+    }
+    return \@values;
+};
+
+ajax '/edit' => sub {
+    my ($o, $error) = object_from(param 'id');
+    return $error if not $o;
+    my $type = $o->type_name;
+    my $form = $forms->{$type} or return err("Don't know how to edit a $type.");
+    return {
+        commands => {
+            type   => 'form',
+            title  => "Edit $form->{label}",
+            submit => "/save/edit/$type/" . $o->uuid,
+            fields => field_values($o, $form->{fields}),
+        },
+    };
+};
+
+
+ajax '/save/*/*/*' => sub {
+    my ($action, $type, $id) = splat;
+    my ($valid,  $result   ) = $validator->validate($type => scalar params);
+    $valid or return {
+        form => {errors => $result},
+        err('The form data entered was invalid.'),
+    };
+
+    if ($action eq 'add') {
+        my ($parent, $list);
+        if ($type eq 'company') {
+            ($parent, $list) = ('root', $server->companies);
+        } else {
+            my $t = $server->get($id) or return err("$id does not exist."   );
+            $t->can_adopt($type)      or return err("$id can't adopt $type.");
+            ($parent, $list) = ($t->uuid, $t->children);
+        }
+
+        my $node = $forms->{$type}{class}->new($result);
+        $server->uuids->{$node->uuid} = $node;
+        push @$list, $node;
+
+        return {
+            form     => {valid => 1},
+            messages => "Added $result->{name}.",
+            commands => {
+                type   => 'add',
+                parent => $parent,
+                node   => $node,
+            },
+        };
+    } else {
+        my $node = $server->get($id) or return err("$id does not exist.");
+        $node->type_name eq $type    or return err("$id is not a $type.");
+
+        while (my ($k, $v) = each %$result) { $node->$k($v) }
+
+        return {
+            form     => {valid => 1},
+            messages => "Modified $result->{name}",
+            commands => {type => 'edit', node => $node},
+        };
+    }
+};
 
 ajax '/create_company' => sub {
     my ($valid, $result) = $validator->validate(company => scalar params);

@@ -13,21 +13,25 @@ class Validator {
     my %validators = (
         Str         => fun($val) {
             $val =~ s/^\s*|\s*$//g;
-            return (0, "This can't be empty.") if $val !~ /\S/;
+            $val =~ /\S/ or return (0, "This can't be empty.");
             return (1, "$val");
         },
+        Num         => fun($val) {
+            looks_like_number($val) or return (0, "That's not a number.");
+            return (1, $val + 0);
+        },
         UnsignedNum => fun($val) {
-            return (0, "That's not a number.") if not looks_like_number($val);
-            return (0, "This can't be negative.") if $val < 0;
+            looks_like_number($val) && $val >= 0
+                or return (0, "That's not an unsigned number.");
             return (1, $val + 0);
         },
     );
 
-    method validate(Str $key, Map[Str, Str] $fields) {
+    method validate(Str $key, HashRef $fields) {
         my $form  = $self->forms->{$key} or die "Don't know form ``$key''";
         my $valid = 1;
         my (%results, %errors);
-        for my $f (@$form) {
+        for my $f (@{$form->{fields}}) {
             my $key        = $f->{name};
             my ($ok, $res) = $validators{$f->{type}}->($fields->{$key});
             if ($valid &&= $ok) {

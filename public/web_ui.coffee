@@ -48,7 +48,6 @@ webUi = ($) ->
             .always            handleMessages
 
         getFormBase : (command) ->
-            # FIXME
             url   = command.submit or throw 'ajax: No form URL.'
             $form = $('<form></form>')
             $form.submit (event) ->
@@ -61,6 +60,7 @@ webUi = ($) ->
                 .fail (_, s, e) -> notice("#{s}: #{e}", 'error')
                 .always         -> removeMessage($msg)
                 .always            handleMessages
+
 
     executeAction = (label, key, node) ->
         $msg = addMessage("Executing #{label}...", 'load')
@@ -200,6 +200,7 @@ webUi = ($) ->
             else handleCommand(commands)
         $('#tree').jstree().redraw(true)
 
+
     handleForm = ($form, data) ->
         if data && 'form' of data && f = data.form
             if f.valid
@@ -212,6 +213,7 @@ webUi = ($) ->
                          .addClass('field-error')
                          .find('.field-message')
                          .text(v).stop().slideUp().slideDown()
+
 
     handleDrag = (op, node, parent, pos) ->
         if op is 'move_node'

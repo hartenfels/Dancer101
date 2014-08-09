@@ -1,18 +1,27 @@
 company    :
-    - name  : name
-      label : Name
-      type  : Str
+    label  : Company
+    class  : C101::Company
+    fields :
+        - name  : name
+          label : Name
+          type  : Str
 department :
-    - name  : name
-      label : Name
-      type  : Str
+    label  : Department
+    class  : C101::Department
+    fields :
+        - name  : name
+          label : Name
+          type  : Str
 employee   :
-    - name  : name
-      label : Name
-      type  : Str
-    - name  : address
-      label : Address
-      type  : Str
-    - name  : salary
-      label : Salary
-      type  : UnsignedNum
+    label  : Employee
+    class  : C101::Employee
+    fields :
+        - name  : name
+          label : Name
+          type  : Str
+        - name  : address
+          label : Address
+          type  : Str
+        - name  : salary
+          label : Salary
+          type  : UnsignedNum

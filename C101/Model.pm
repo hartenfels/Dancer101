@@ -56,8 +56,8 @@ class Model {
         &{$visitor->$end}($visitor, $self, $parent, $index);
     }
 
-    method can_adopt(C101::Model $child) {
-        my $t = $child->type_name;
+    method can_adopt($t) {
+        $t = $t->type_name if ref $t;
         if      ($t eq 'department') {
             return $self->does('C101::Departments');
         } elsif ($t eq 'employee'  ) {
