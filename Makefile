@@ -11,7 +11,7 @@ doc: doc/dancer101.html
 test: results
 
 clean:
-	rm -f public/web_ui.js public/web_ui.html doc/dancer101.html results
+	rm -f public/web_ui.html doc/dancer101.html results
 
 public/web_ui.html:
 	GET https://rawgit.com/hartenfels/WebUI101/master/dist/web_ui.html > public/web_ui.html
