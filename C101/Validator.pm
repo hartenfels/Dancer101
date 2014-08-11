@@ -27,26 +27,25 @@ class Validator {
         },
     );
 
-    method validate(Str $key, HashRef $fields) {
-        my $form  = $self->forms->{$key} or die "Don't know form ``$key''";
-        my $valid = 1;
+    method validate(Str $what, HashRef $fields) {
+        my $form  = $self->forms->{$what} or die "Don't know form ``$what''";
         my (%results, %errors);
         for my $f (@{$form->{fields}}) {
             my $key        = $f->{name};
             my ($ok, $res) = $validators{$f->{type}}->($fields->{$key});
-            if ($valid &&= $ok) {
+            if ($ok) {
                 $results{$key} = $res;
             } else {
                 $errors{$key}  = $res;
             }
         }
-        return ($valid, $valid ? \%results : \%errors);
+        return (!%errors, %errors ? \%results : \%errors);
     }
 
 }
 
 __END__
 
-=head1 Validator
+=head2 Validator
 
 =cut

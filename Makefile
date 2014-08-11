@@ -1,28 +1,29 @@
-MODULES = $(wildcard C101/*.pm)
+EXECUTABLES = $(wildcard *.plx)
+MODULES     = $(wildcard C101/*.pm)
+PERL_FILES  = $(EXECUTABLES) $(MODULES)
 
-all: web_ui doc test
+all: doc test html
 
-web_ui: public/web_ui.js
+html: public/web_ui.html
 
 doc: doc/dancer101.html
 
 test: results
 
 clean:
-	rm public/web_ui.js doc/dancer101.html results
+	rm -f public/web_ui.js public/web_ui.html doc/dancer101.html results
 
+public/web_ui.html:
+	GET https://rawgit.com/hartenfels/WebUI101/master/dist/web_ui.html > public/web_ui.html
 
-public/web_ui.js: public/web_ui.coffee
-	coffee -c public/web_ui.coffee
-
-doc/dancer101.html: $(MODULES)
-	cat doc/dancer101.pod $(MODULES) \
+doc/dancer101.html: $(PERL_FILES)
+	cat doc/dancer101.pod $(PERL_FILES) \
 	| perl -MPod::Simple::HTML \
 	  -e '$$p=Pod::Simple::HTML->new;$$p->index(1);$$p->parse_from_file' \
 	> doc/dancer101.html
 
-results: $(MODULES) dancer101.plx test101.plx
+results: $(PERL_FILES)
 	perl -c dancer101.plx && perl test101.plx | tee results
 
 
-.PHONY: all clean web_ui doc test
+.PHONY: all clean doc test html

@@ -6,7 +6,7 @@ use Exporter;
 use C101::Visitor;
 
 use vars qw(@ISA @EXPORT_OK);
-@ISA       = ('Exporter');
+@ISA       = qw(Exporter);
 @EXPORT_OK = qw(cut depth median remove total uuids);
 
 
@@ -109,31 +109,41 @@ __END__
 
 =head2 C101::Operations
 
-Simple feature implementations, like total and cut. Each of the operations takes a list
-of zero or more Companies, Departments and Employees (or a mix of them).
+Simple feature implementations, like total and cut. Each of the operations
+takes a list of zero or more Companies, Departments and Employees (or a mix of
+them).
 
 =head3 cut(Company|Department|Employee, ...)
 
-Implements Feature:Cut. Halves all employees' salaries, salaries of 0 are left alone.
-Returns a list in list context and a list reference in scalar context.
+Implements Feature:Cut.
+
+Halves all employees' salaries, salaries of 0 are left alone. Depending on
+context a list or list reference of the employees whose salary was cut is
+returned.
 
 =head3 depth(Company|Department|Employee, ...)
 
-Implements Feature:Depth. Returns the maximum depth of the given objects.
+Implements Feature:Depth.
+
+Returns the maximum depth of the given objects.
 
 =head3 median(Company|Department|Employee, ...)
 
-Implements Feature:Median. Returns the median salary of all given employees. If there are
-no employees, 0 will be returned.
+Implements Feature:Median.
+
+Returns the median salary of all given employees. If there are no employees,
+0 will be returned.
 
 =head3 total(Company|Department|Employee, ...)
 
-Implements Feature:Total. Returns the sum of all given employees' salaries.
+Implements Feature:Total.
+
+Returns the sum of all given employees' salaries.
 
 =head3 uuids(Company|Department|Employee, ...)
 
-Returns a reference to a hash mapping from UUIDs to their respective Company, Department
-or Employee. Dies if one of the UUIDs is not actually unique.
+Returns a hash reference mapping from UUIDs to the objects with that UUID. Dies
+if one of the UUIDs is not as unique as it ought to be.
 
 =cut
 

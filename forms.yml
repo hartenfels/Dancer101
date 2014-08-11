@@ -2,21 +2,21 @@ company    :
     label  : Company
     class  : C101::Company
     fields :
-        - name  : name
+        - name  : text
           label : Name
           type  : Str
 department :
     label  : Department
     class  : C101::Department
     fields :
-        - name  : name
+        - name  : text
           label : Name
           type  : Str
 employee   :
     label  : Employee
     class  : C101::Employee
     fields :
-        - name  : name
+        - name  : text
           label : Name
           type  : Str
         - name  : address

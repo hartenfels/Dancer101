@@ -1,41 +1,18 @@
 #!/usr/bin/perl
 use strict;
 use warnings;
-use feature              qw(say switch);
 use Dancer;
 use Dancer::Plugin::Ajax;
-use Data::Dumper;
 use YAML;
 use C101::Operations     qw(cut depth median total remove);
 use C101::Server;
 use C101::Validator;
 
-my $server    = C101::Server->new;
+
 my $forms     = YAML::LoadFile('forms.yml');
+my $web_ui    = YAML::LoadFile('web_ui.yml');
+my $server    = C101::Server->new;
 my $validator = C101::Validator->new(forms => $forms);
-my $config    = YAML::LoadFile('web_ui.yml');
-
-ajax '/' => sub {
-    my $type = param 'type';
-    if ($type eq 'config') {
-        return $config;
-    } else {
-        return {
-            messages => {
-                text => "Unknown request: $type",
-                type => 'error'
-            },
-        };
-    }
-};
-
-ajax '/tree' => sub {{
-    type     => 'root',
-    id       => 'root',
-    text     => 'Companies',
-    state    => {'opened' => 1},
-    children => $server->companies,
-}};
 
 
 sub err {
@@ -48,6 +25,20 @@ sub object_from {
     my $o  = $server->get($id) or return (0, err("$id does not exist."));
     return $o;
 }
+
+
+get  '/' => sub { send_file '/web_ui.html' };
+ajax '/' => sub { $web_ui                  };
+
+
+ajax '/tree' => sub {{
+    type     => 'root',
+    id       => 'root',
+    text     => 'Companies',
+    state    => {'opened' => 1},
+    children => $server->companies,
+}};
+
 
 sub op {
     my ($o,     $error   ) = object_from(param 'id');
@@ -62,6 +53,7 @@ ajax '/depth'  => sub { op('Depth',  \&depth ) };
 ajax '/median' => sub { op('Median', \&median) };
 ajax '/total'  => sub { op('Total',  \&total ) };
 
+
 ajax '/cut' => sub {
     my ($o, $error) = object_from(param 'id');
     return $error if not $o;
@@ -72,6 +64,7 @@ ajax '/cut' => sub {
     return {commands => \@commands};
 };
 
+
 ajax '/delete' => sub {
     my ($o, $error) = object_from(param 'id');
     return $error if not $o;
@@ -79,6 +72,7 @@ ajax '/delete' => sub {
     $server->remove($o);
     return {commands => {type => 'delete', id => $o->uuid}};
 };
+
 
 ajax '/restructure' => sub {
     my ($source, $error) = object_from(param 'id');
@@ -107,6 +101,19 @@ ajax '/restructure' => sub {
     };
 };
 
+sub field_values {
+    my ($o, $fields) = @_;
+    my @values;
+    for my $f (@$fields) {
+        my $method = $f->{name};
+        push @values, {%$f, value => $o->$method};
+    }
+    return \@values;
+}
+
+sub get_form {
+
+}
 
 while (my ($type, $form) = each %$forms) {
     ajax "/$type" => sub {{
@@ -119,16 +126,6 @@ while (my ($type, $form) = each %$forms) {
     }};
 }
 
-
-sub field_values {
-    my ($o, $fields) = @_;
-    my @values;
-    for my $f (@$fields) {
-        my $method = $f->{name};
-        push @values, {%$f, value => $o->$method};
-    }
-    return \@values;
-};
 
 ajax '/edit' => sub {
     my ($o, $error) = object_from(param 'id');
@@ -191,30 +188,6 @@ ajax '/save/*/*/*' => sub {
     }
 };
 
-ajax '/create_company' => sub {
-    my ($valid, $result) = $validator->validate(company => scalar params);
-    if ($valid) {
-        my $node = C101::Company->new($result);
-        push @{$server->companies}, $node;
-        return {
-            form     => {valid => 1},
-            messages => "Added company $result->{name}.",
-            commands => {
-                type   => 'add',
-                parent => 'root',
-                node   => $node,
-            },
-        };
-    } else {
-        return {
-            form     => {errors => $result},
-            messages => {text => 'Invalid form data.', type => 'error'},
-        };
-    }
-};
-
-get '/' => sub { send_file '/web_ui.html' };
-
 
 # Exit gracefully on interrupt
 $SIG{INT} = sub {
@@ -224,4 +197,3 @@ $SIG{INT} = sub {
 
 
 dance;
-

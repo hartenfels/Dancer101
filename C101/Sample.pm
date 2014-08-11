@@ -3,6 +3,10 @@ use strict;
 use warnings;
 use C101::Model;
 
+use vars qw(@ISA @EXPORT_OK);
+@ISA       = qw(Exporter);
+@EXPORT_OK = qw(create);
+
 sub create {
     C101::Company->new({
         name     => 'ACME Corporation',
@@ -71,8 +75,10 @@ __END__
 
 =head2 C101::Sample
 
-Calling C<sample()> will return a newly created sample Company. It's always the same
-company, only the UUIDs will differ.
+=head3 create()
+
+Returns the sample Company. It will always be the same company, only the
+UUIDs will differ.
 
 =cut
 
