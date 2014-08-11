@@ -9,12 +9,10 @@ class Visitor {
         default  => sub { sub {} },
     );
 
-    has 'begin_company'    => %params;
-    has 'begin_department' => %params;
-    has 'begin_employee'   => %params;
-    has 'end_employee'     => %params;
-    has 'end_department'   => %params;
-    has 'end_company'      => %params;
+    for my $type (qw(root company department employee)) {
+        has "begin_$type" => %params;
+        has   "end_$type" => %params;
+    }
 }
 
 __END__

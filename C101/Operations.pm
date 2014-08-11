@@ -7,7 +7,7 @@ use C101::Visitor;
 
 use vars qw(@ISA @EXPORT_OK);
 @ISA       = qw(Exporter);
-@EXPORT_OK = qw(cut depth median remove total uuids);
+@EXPORT_OK = qw(cut depth median remove remove_uuids total uuids);
 
 
 sub cut {
@@ -58,9 +58,9 @@ sub remove {
 
     my @removed;
     my $callback = sub {
-        my (undef, $thing, $list, $index) = @_;
-        if (&$should_remove($thing)) {
-            push @removed, {list => $list, index => $$index};
+        my (undef, $obj, $list, $index) = @_;
+        if ($should_remove->($obj)) {
+            push @removed, {obj => $obj, list => $list, index => $$index};
             splice($list, $$index--, 1);
         }
     };
@@ -77,6 +77,21 @@ sub remove {
     return wantarray ? @removed : \@removed;
 }
 
+sub remove_uuids {
+    my $uuids = shift;
+
+    my $callback = sub { delete $uuids->{$_[1]->id} };
+    my $visitor = C101::Visitor->new({
+        begin_root       => $callback,
+        begin_company    => $callback,
+        begin_department => $callback,
+        begin_employee   => $callback,
+    });
+
+    $_->visit($visitor) for @_;
+    return undef;
+}
+
 sub total {
     my $total   = 0;
     my $visitor = C101::Visitor->new({
@@ -89,19 +104,16 @@ sub total {
 }
 
 sub uuids {
-    my $uuids    = {};
-    my $callback = sub {
-        my $u = $_[1]->uuid;
-        die "$u is not unique" if $uuids->{$u};
-        $uuids->{$u} = $_[1];
-    };
+    my $uuids = \%C101::Model::uuids;
+    my $callback = sub { $_[1]->BUILD };
     my $visitor  = C101::Visitor->new({
+        begin_root       => $callback,
         begin_company    => $callback,
         begin_department => $callback,
         begin_employee   => $callback,
     });
     $_->visit($visitor) for @_;
-    return $uuids;
+    return @_;
 }
 
 1;

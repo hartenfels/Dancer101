@@ -39,7 +39,7 @@ class Validator {
                 $errors{$key}  = $res;
             }
         }
-        return (!%errors, %errors ? \%results : \%errors);
+        return (!%errors, %errors ? \%errors : \%results);
     }
 
 }

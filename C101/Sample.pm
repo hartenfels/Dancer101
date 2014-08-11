@@ -8,68 +8,72 @@ use vars qw(@ISA @EXPORT_OK);
 @EXPORT_OK = qw(create);
 
 sub create {
-    C101::Company->new({
-        name     => 'ACME Corporation',
+    C101::Model->new(
+        text     => 'Companies',
         children => [
-            C101::Department->new({
-                name     => 'Research',
+            C101::Company->new(
+                text     => 'ACME Corporation',
                 children => [
-                    C101::Employee->new({
-                        name    => 'Craig',
-                        address => 'Redmond',
-                        salary  => 123456,
-                    }),
-                    C101::Employee->new({
-                        name    => 'Erik',
-                        address => 'Utrecht',
-                        salary  => 12345,
-                    }),
-                    C101::Employee->new({
-                        name    => 'Ralf',
-                        address => 'Koblenz',
-                        salary  => 1234,
-                    }),
-                ],
-            }),
-            C101::Department->new({
-                name     => 'Development',
-                children => [
-                    C101::Employee->new({
-                        name    => 'Ray',
-                        address => 'Redmond',
-                        salary  => 234567,
-                    }),
-                    C101::Department->new({
-                        name     => 'Dev1',
+                    C101::Department->new(
+                        text     => 'Research',
                         children => [
-                            C101::Employee->new({
-                                name    => 'Klaus',
-                                address => 'Boston',
-                                salary  => 23456,
-                            }),
-                            C101::Department->new({
-                                name     => 'Dev1.1',
-                                children => [
-                                    C101::Employee->new({
-                                        name    => 'Karl',
-                                        address => 'Riga',
-                                        salary  => 2345,
-                                    }),
-                                    C101::Employee->new({
-                                        name    => 'Joe',
-                                        address => 'Wifi City',
-                                        salary  => 2344,
-                                    }),
-                                ],
-                            })
+                            C101::Employee->new(
+                                text    => 'Craig',
+                                address => 'Redmond',
+                                salary  => 123456,
+                            ),
+                            C101::Employee->new(
+                                text    => 'Erik',
+                                address => 'Utrecht',
+                                salary  => 12345,
+                            ),
+                            C101::Employee->new(
+                                text    => 'Ralf',
+                                address => 'Koblenz',
+                                salary  => 1234,
+                            ),
                         ],
-                    }),
+                    ),
+                    C101::Department->new(
+                        text     => 'Development',
+                        children => [
+                            C101::Employee->new(
+                                text    => 'Ray',
+                                address => 'Redmond',
+                                salary  => 234567,
+                            ),
+                            C101::Department->new(
+                                text     => 'Dev1',
+                                children => [
+                                    C101::Employee->new(
+                                        text    => 'Klaus',
+                                        address => 'Boston',
+                                        salary  => 23456,
+                                    ),
+                                    C101::Department->new(
+                                        text     => 'Dev1.1',
+                                        children => [
+                                            C101::Employee->new(
+                                                text    => 'Karl',
+                                                address => 'Riga',
+                                                salary  => 2345,
+                                            ),
+                                            C101::Employee->new(
+                                                text    => 'Joe',
+                                                address => 'Wifi City',
+                                                salary  => 2344,
+                                            ),
+                                        ],
+                                    )
+                                ],
+                            ),
+                        ],
+                    ),
                 ],
-            }),
-        ],
-    });
+            )
+        ]
+    );
 }
-
 1;
 __END__
 
@@ -77,8 +81,7 @@ __END__
 
 =head3 create()
 
-Returns the sample Company. It will always be the same company, only the
-UUIDs will differ.
+Returns the sample model. It'll always be the same, only the UUIDs will differ.
 
 =cut
 

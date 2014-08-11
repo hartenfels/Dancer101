@@ -6,20 +6,29 @@ library Types101 extends Types::Standard declares UnsignedNum {
     declare UnsignedNum, as Num, where { $_ >= 0 };
 }
 
+
 class Model {
     use Data::UUID;
+    use C101::Operations qw(remove_uuids);
 
-    has 'name' => (
+    our %uuids;
+
+    fun create_uuid {
+        state $ug = new Data::UUID;
+        return $ug->create_str();
+    }
+
+    has 'text' => (
         is       => 'rw',
         isa      => 'Str',
         required => 1,
     );
 
-    has 'uuid' => (
+    has 'id' => (
         is       => 'rw',
         isa      => 'Str',
         required => 1,
-        default  => \&_create_uuid,
+        default  => \&create_uuid,
     );
 
     has 'children' => (
@@ -29,16 +38,8 @@ class Model {
         default  => sub { [] },
     );
 
-    method renew_uuid {
-        my $old  = $self->uuid;
-        $self->uuid(_create_uuid());
-        return $old;
-    }
-
-    fun _create_uuid {
-        state $ug = new Data::UUID;
-        return $ug->create_str();
-    }
+    method BUILD   { $uuids{$self->id} = $self    }
+    method DESTROY { remove_uuids(\%uuids, $self) }
 
     method visit(C101::Visitor $visitor, $parent?, $index?) {
         my $type  = $self->type_name;
@@ -55,37 +56,24 @@ class Model {
         &{$visitor->$end}($visitor, $self, $parent, $index);
     }
 
-    method can_adopt($t) {
-        $t = $t->type_name if ref $t;
-        if      ($t eq 'department') {
-            return $self->does('C101::Departments');
-        } elsif ($t eq 'employee'  ) {
-            return $self->does('C101::Employees'  );
-        }
-        return 0;
-    }
+    method TO_JSON {{type => $self->type_name, state => {opened => 1}, %$self}}
 
-    method TO_JSON {{
-        type     => $self->type_name,
-        id       => $self->uuid,
-        text     => $self->name,
-        children => $self->children,
-    }}
+    method type_name   { 'root'         }
+    method child_types { {company => 1} }
 }
 
 
-role Departments {}
-
-role Employees   {}
-
-
-class Company    extends Model with Departments {
-    method type_name { 'company' }
+class Company    extends Model {
+    method type_name   { 'company'         }
+    method child_types { {department => 1} }
 }
 
-class Department extends Model with Departments, Employees {
-    method type_name { 'department' }
+
+class Department extends Model {
+    method type_name   { 'department'                     }
+    method child_types { {department => 1, employee => 1} }
 }
+
 
 class Employee   extends Model types Types101 {
     has 'address' => (
@@ -100,58 +88,31 @@ class Employee   extends Model types Types101 {
         required => 1,
     );
 
-    method type_name { 'employee' }
-
-    method TO_JSON {{
-        type    => $self->type_name,
-        id      => $self->uuid,
-        text    => $self->name,
-        address => $self->address,
-        salary  => $self->salary,
-    }}
+    method type_name   { 'employee' }
+    method child_types { {}         }
 }
 
 __END__
 
 =head2 C101::Model
 
-The object model for 101Companies. Contains classes for Companies, Departments and
-Employees, which are all extensions of the Model class.
+The object model for 101Companies. Contains classes for Companies, Departments
+and Employees, which are all extensions of the Model class.
 
-Each model object has a name and a UUID, the latter of which will be generated
-automatically and can be renewed with L<renew_uuid|/method C101::Model::renew_uuid>.
-
-There is also the two roles I<Departments> and I<Employees>, which give a model class
-a list of Departments or Employees respectively.
+Each model object has a text and a UUID, the latter of which will be generated
+automatically.
 
 =head3 Classes
 
-=over 4
+=over
 
-=item I<Company> extends Model with Departments
+=item I<Company> extends Model
 
-=item I<Department> extends Model with Departments, Employees
+=item I<Department> extends Model
 
 =item I<Employee> extends Model
 
 =back
-
-=head3 method C101::Model::renew_uuid
-
-Gives the object a newly generated UUID. The old UUID is returned.
-
-=head3 method C101::Model::visit(C101::Visitor $visitor, $parent?, $index?)
-
-Hosts a visit for the given $visitor. This will call the visitor's appropriate I<begin>
-callback, then visit all its Employees and then Departments (if the object implements
-those respective roles) and finally call the visitor's appropriate I<end> callback.
-
-When visiting Employees or Departments, the list that is being iterated through and a
-reference to the iteration index will be passed as $parent and $index respectively. When
-calling this method from somewhere else, make sure to pass such a list and index
-reference if your visitor needs it.
-
-See also L</C101::Visitor>.
 
 =cut
 

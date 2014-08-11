@@ -3,27 +3,39 @@ use strict;
 use warnings;
 use Dancer;
 use Dancer::Plugin::Ajax;
+use File::Slurp       qw(slurp write_file);
 use YAML;
-use C101::Operations     qw(cut depth median total remove);
-use C101::Server;
+use C101::Operations  qw(cut depth median total uuids remove);
+use C101::Persistence qw(parse unparse);
+use C101::Sample;
 use C101::Validator;
 
 
-my $forms     = YAML::LoadFile('forms.yml');
+sub load_model {
+    my $path = setting('company_file');
+    if (-e $path) {
+        return uuids(parse(scalar slurp($path)));
+    } else {
+        return C101::Sample::create;
+    }
+}
+
+my ($model)   = load_model;
+my $uuids     = \%C101::Model::uuids;
 my $web_ui    = YAML::LoadFile('web_ui.yml');
-my $server    = C101::Server->new;
+my $forms     = YAML::LoadFile('forms.yml');
 my $validator = C101::Validator->new(forms => $forms);
 
 
 sub err {
     my @err = (messages => [{type => 'error', text => shift}]);
     return wantarray ? @err : {@err};
-};
+}
 
 sub object_from {
-    my $id = shift             or return (0, err('No ID given.'       ));
-    my $o  = $server->get($id) or return (0, err("$id does not exist."));
-    return $o;
+    my $id  = shift         or return (0, scalar err('No ID given.'       ));
+    my $obj = $uuids->{$id} or return (0, scalar err("$id does not exist."));
+    return $obj;
 }
 
 
@@ -31,22 +43,14 @@ get  '/' => sub { send_file '/web_ui.html' };
 ajax '/' => sub { $web_ui                  };
 
 
-ajax '/tree' => sub {{
-    type     => 'root',
-    id       => 'root',
-    text     => 'Companies',
-    state    => {'opened' => 1},
-    children => $server->companies,
-}};
+ajax '/tree' => sub { $model };
 
 
 sub op {
-    my ($o,     $error   ) = object_from(param 'id');
-    return $error if not $o;
+    my ($obj,   $error   ) = object_from(param 'id');
+    return $error if not $obj;
     my ($title, $callback) = @_;
-    return {
-        messages => "$title: " . $callback->(ref $o eq 'ARRAY' ? @$o : $o),
-    };
+    return {messages => "$title: " . $callback->($obj)};
 }
 
 ajax '/depth'  => sub { op('Depth',  \&depth ) };
@@ -55,22 +59,22 @@ ajax '/total'  => sub { op('Total',  \&total ) };
 
 
 ajax '/cut' => sub {
-    my ($o, $error) = object_from(param 'id');
-    return $error if not $o;
+    my ($obj, $error) = object_from(param 'id');
+    return $error if not $obj;
     my @commands;
-    for (cut(ref $o eq 'ARRAY' ? @$o : $o)) {
-        push @commands, {type => 'edit', node => $_}
-    }
+    push @commands, {type => 'edit', node => $_} for cut($obj);
     return {commands => \@commands};
 };
 
 
 ajax '/delete' => sub {
-    my ($o, $error) = object_from(param 'id');
-    return $error if not $o;
-    return err("Can't delete root.") if ref $o eq 'ARRAY';
-    $server->remove($o);
-    return {commands => {type => 'delete', id => $o->uuid}};
+    my ($obj, $error) = object_from(param 'id');
+    return $error if not $obj;
+    return err("Can't delete root.") if $obj->type_name eq 'root';
+    for my $rm (remove(sub { $_[0] == $obj }, $model->children)) {
+        delete $uuids->{$rm->{obj}->id};
+    }
+    return {commands => {type => 'delete', id => $obj->id}};
 };
 
 
@@ -80,12 +84,12 @@ ajax '/restructure' => sub {
     (my $target, $error) = object_from(param 'target');
     return $error if not $target;
 
-    $target->can_adopt($source)
+    $target->child_types->{$source->type_name}
         or return err('Restructure: Incompatible types.');
 
     my $list   = $target->children;
     my $pos    = param 'pos' // $#$list;
-    my ($rm)   = remove(sub { $_[0] == $source }, $server->companies);
+    my ($rm)   = remove(sub { $_[0] == $source }, $model->children);
     my $offset = $rm && $rm->{list} == $list && $pos >= $rm->{index}
                ? $pos - 1
                : $pos;
@@ -94,8 +98,8 @@ ajax '/restructure' => sub {
     return {
         commands => {
             type   => 'move',
-            source => $source->uuid,
-            target => $target->uuid,
+            source => $source->id,
+            target => $target->id,
             pos    => $pos,
         },
     };
@@ -109,10 +113,6 @@ sub field_values {
         push @values, {%$f, value => $o->$method};
     }
     return \@values;
-}
-
-sub get_form {
-
 }
 
 while (my ($type, $form) = each %$forms) {
@@ -136,7 +136,7 @@ ajax '/edit' => sub {
         commands => {
             type   => 'form',
             title  => "Edit $form->{label}",
-            submit => "/save/edit/$type/" . $o->uuid,
+            submit => "/save/edit/$type/" . $o->id,
             fields => field_values($o, $form->{fields}),
         },
     };
@@ -154,20 +154,20 @@ ajax '/save/*/*/*' => sub {
     if ($action eq 'add') {
         my ($parent, $list);
         if ($type eq 'company') {
-            ($parent, $list) = ('root', $server->companies);
+            ($parent, $list) = ($model->id, $model->children);
         } else {
-            my $t = $server->get($id) or return err("$id does not exist."   );
-            $t->can_adopt($type)      or return err("$id can't adopt $type.");
-            ($parent, $list) = ($t->uuid, $t->children);
+            my $t = $uuids->{$id}    or return err("$id does not exist."   );
+            $t->child_types->{$type} or return err("$id can't adopt $type.");
+            ($parent, $list) = ($t->id, $t->children);
         }
 
         my $node = $forms->{$type}{class}->new($result);
-        $server->uuids->{$node->uuid} = $node;
+        # $uuids{$node->id} = $node;
         push @$list, $node;
 
         return {
             form     => {valid => 1},
-            messages => "Added $result->{name}.",
+            messages => "Added $result->{text}.",
             commands => {
                 type   => 'add',
                 parent => $parent,
@@ -175,14 +175,14 @@ ajax '/save/*/*/*' => sub {
             },
         };
     } else {
-        my $node = $server->get($id) or return err("$id does not exist.");
-        $node->type_name eq $type    or return err("$id is not a $type.");
+        my $node = $uuids->{$id}  or return err("$id does not exist.");
+        $node->type_name eq $type or return err("$id is not a $type.");
 
         while (my ($k, $v) = each %$result) { $node->$k($v) }
 
         return {
             form     => {valid => 1},
-            messages => "Modified $result->{name}",
+            messages => "Modified $result->{text}",
             commands => {type => 'edit', node => $node},
         };
     }
@@ -191,9 +191,8 @@ ajax '/save/*/*/*' => sub {
 
 # Exit gracefully on interrupt
 $SIG{INT} = sub {
-    $server->save;
+    write_file setting('company_file'), unparse($model);
     exit;
 };
-
 
 dance;
